@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedNotes — Criar Conta</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --text: #1a1d23;
+    --text-muted: #6b7280;
+    --border: #e2e5ea;
+    --radius: 8px;
+  }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #3b82f6 100%);
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .auth-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 40px 36px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  }
+  .auth-logo {
+    font-size: 13px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--primary); margin-bottom: 6px;
+    text-align: center;
+  }
+  .auth-title { font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 4px; text-align: center; }
+  .auth-subtitle { font-size: 14px; color: var(--text-muted); margin-bottom: 28px; text-align: center; }
+  
+  .auth-form { display: flex; flex-direction: column; gap: 14px; }
+  .field label { font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px; }
+  .field input {
+    width: 100%; padding: 10px 14px; border: 1.5px solid var(--border);
+    border-radius: var(--radius); font-size: 14px; color: var(--text);
+    transition: border-color .15s; outline: none; background: #fafafa;
+  }
+  .field input:focus { border-color: var(--primary); background: #fff; }
+  
+  .auth-btn {
+    padding: 12px; background: var(--primary); color: #fff; border: none;
+    border-radius: var(--radius); font-size: 15px; font-weight: 700;
+    cursor: pointer; margin-top: 8px; transition: background .15s;
+  }
+  .auth-btn:hover { background: var(--primary-dark); }
+  
+  .auth-footer {
+    margin-top: 24px; text-align: center; font-size: 14px; color: var(--text-muted);
+  }
+  .auth-footer a { color: var(--primary); font-weight: 600; text-decoration: none; }
+  .auth-footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="auth-card">
+  <div class="auth-logo">MedNotes</div>
+  <h1 class="auth-title">Comece agora</h1>
+  <p class="auth-subtitle">Crie sua conta e organize sua rotina médica.</p>
+  
+  <form class="auth-form" onsubmit="event.preventDefault(); window.location.href='notas.html';">
+    <div class="field">
+      <label>Nome completo</label>
+      <input type="text" placeholder="Dr. João Silva" required>
+    </div>
+    <div class="field">
+      <label>E-mail</label>
+      <input type="email" placeholder="seu@email.com" required>
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" placeholder="mínimo 6 caracteres" required>
+    </div>
+    <div class="field">
+      <label>Confirmar senha</label>
+      <input type="password" placeholder="repita a senha" required>
+    </div>
+    <button type="submit" class="auth-btn">Criar conta</button>
+  </form>
+  
+  <div class="auth-footer">
+    Já tem uma conta? <a href="login.html">Fazer login</a>
+  </div>
+</div>
+
+</body>
+</html>
