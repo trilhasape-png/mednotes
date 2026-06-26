@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedNotes — Bloco de Notas Médico</title>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --border: #e2e5ea;
+    --text: #1a1d23;
+    --text-muted: #6b7280;
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --danger: #dc2626;
+    --tab-active-bg: #ffffff;
+    --tab-inactive-bg: #eef0f4;
+    --tab-text: #374151;
+    --highlight: #fef08a;
+    --highlight-text: #713f12;
+    --bold-color: #1a1d23;
+    --radius: 6px;
+    --shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── LOADING SCREEN ── */
+  #loading-screen {
+    position: fixed; inset: 0;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #3b82f6 100%);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2000;
+    flex-direction: column;
+    gap: 16px;
+  }
+  #loading-screen.hidden { display: none; }
+  .loading-logo { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: 2px; }
+  .loading-spinner {
+    width: 36px; height: 36px;
+    border: 3px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  .loading-msg { font-size: 13px; color: rgba(255,255,255,0.7); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── AUTH SCREEN ── */
+  #auth-screen {
+    position: fixed; inset: 0;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #3b82f6 100%);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+  }
+  #auth-screen.hidden { display: none; }
+
+  .auth-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 40px 36px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  }
+  .auth-logo {
+    font-size: 13px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--primary); margin-bottom: 6px;
+  }
+  .auth-title { font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .auth-subtitle { font-size: 14px; color: var(--text-muted); margin-bottom: 28px; }
+  .auth-tabs { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 2px solid var(--border); }
+  .auth-tab {
+    padding: 8px 20px; font-size: 14px; font-weight: 600; color: var(--text-muted);
+    cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px;
+    transition: color .15s, border-color .15s; background: none;
+    border-top: none; border-left: none; border-right: none;
+  }
+  .auth-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .auth-form { display: flex; flex-direction: column; gap: 14px; }
+  .auth-form.hidden { display: none; }
+  .field label { font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px; }
+  .field input {
+    width: 100%; padding: 10px 14px; border: 1.5px solid var(--border);
+    border-radius: var(--radius); font-size: 14px; color: var(--text);
+    transition: border-color .15s; outline: none; background: #fafafa;
+  }
+  .field input:focus { border-color: var(--primary); background: #fff; }
+  .auth-btn {
+    padding: 11px; background: var(--primary); color: #fff; border: none;
+    border-radius: var(--radius); font-size: 15px; font-weight: 700;
+    cursor: pointer; margin-top: 4px; transition: background .15s;
+  }
+  .auth-btn:hover { background: var(--primary-dark); }
+  .auth-msg { font-size: 13px; color: var(--danger); min-height: 18px; text-align: center; }
+
+  /* ── APP SHELL ── */
+  #app { display: flex; flex-direction: column; height: 100vh; }
+  #app.hidden { display: none; }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    height: 42px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 12px; gap: 10px;
+    flex-shrink: 0; box-shadow: var(--shadow); position: relative; z-index: 10;
+  }
+  .topbar-logo {
+    font-size: 12px; font-weight: 800; letter-spacing: 1.5px;
+    color: var(--primary); text-transform: uppercase; margin-right: 8px;
+  }
+
+  .tabbar { display: flex; align-items: center; gap: 2px; flex: 1; overflow-x: auto; scrollbar-width: none; }
+  .tabbar::-webkit-scrollbar { display: none; }
+
+  .tab {
+    display: flex; align-items: center; gap: 6px; padding: 5px 12px;
+    border-radius: 5px 5px 0 0; font-size: 12.5px; font-weight: 600;
+    cursor: pointer; white-space: nowrap; border: 1px solid transparent;
+    border-bottom: none; user-select: none; position: relative; top: 1px;
+    transition: background .12s; background: var(--tab-inactive-bg); color: var(--text-muted);
+  }
+  .tab.active { background: var(--tab-active-bg); color: var(--primary); border-color: var(--border); border-bottom-color: transparent; }
+  .tab .tab-close {
+    font-size: 12px; line-height: 1; color: var(--text-muted); cursor: pointer;
+    padding: 1px 2px; border-radius: 3px; transition: background .1s, color .1s;
+    background: none; border: none;
+  }
+  .tab .tab-close:hover { background: #e5e7eb; color: var(--danger); }
+  .tab-add {
+    width: 26px; height: 26px; border-radius: 50%; background: none;
+    border: 1.5px solid var(--border); color: var(--text-muted); font-size: 16px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: background .12s, color .12s; line-height: 1;
+  }
+  .tab-add:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  .topbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .user-pill {
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+    background: #f3f4f6; padding: 4px 10px; border-radius: 20px; cursor: default;
+  }
+  .btn-logout {
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+    background: none; border: 1px solid var(--border); border-radius: 5px;
+    padding: 4px 10px; cursor: pointer; transition: all .12s;
+  }
+  .btn-logout:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* ── TOOLBAR ── */
+  .toolbar {
+    display: flex; align-items: center; gap: 4px; padding: 6px 14px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    flex-shrink: 0; flex-wrap: wrap;
+  }
+  .toolbar-btn {
+    padding: 4px 8px; border: 1px solid transparent; border-radius: 4px;
+    background: none; cursor: pointer; font-size: 13px; color: var(--text-muted);
+    font-weight: 600; transition: all .12s; display: flex; align-items: center; gap: 3px;
+  }
+  .toolbar-btn:hover { background: #f3f4f6; border-color: var(--border); color: var(--text); }
+  .toolbar-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .toolbar-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
+  .toolbar-color {
+    width: 22px; height: 22px; border-radius: 4px; border: 1.5px solid var(--border);
+    cursor: pointer; background: #fbbf24; padding: 0; transition: transform .1s;
+  }
+  .toolbar-color:hover { transform: scale(1.15); }
+  .toolbar-label { font-size: 11px; color: var(--text-muted); font-weight: 600; letter-spacing: .5px; }
+
+  /* ── EDITOR AREA ── */
+  .editor-wrap { flex: 1; overflow-y: auto; padding: 0; background: var(--surface); }
+  .editor-page { background: var(--surface); width: 100%; min-height: calc(100vh - 200px); padding: 40px 56px; }
+  .editor-content {
+    font-size: 14px; font-family: 'Courier New', 'Consolas', monospace;
+    line-height: 1.75; color: var(--text); border: none; outline: none;
+    min-height: calc(100vh - 160px); padding: 40px 56px; display: block;
+  }
+  .editor-content mark { background: var(--highlight); color: var(--highlight-text); border-radius: 2px; padding: 0 1px; }
+  .editor-content::first-line { color: var(--primary); font-weight: 800; font-size: 16px; }
+
+
+
+  /* ── TAB RENAME ── */
+  .tab-input { border: none; background: none; font-size: 12.5px; font-weight: 600; color: inherit; width: 90px; outline: none; font-family: inherit; }
+
+  .tab.dragging { opacity: 0.4; }
+  .tab.drag-over { border-left: 2px solid var(--primary); }
+
+  .editor-wrap::-webkit-scrollbar { width: 6px; }
+  .editor-wrap::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+
+  /* status bar */
+  .statusbar {
+    position: fixed; bottom: 10px; right: 16px;
+    background: rgba(0,0,0,0.18); color: rgba(255,255,255,0.85);
+    font-size: 11px; display: flex; align-items: center; gap: 12px;
+    padding: 4px 12px; border-radius: 20px; pointer-events: none;
+    z-index: 50; backdrop-filter: blur(4px);
+  }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading-screen">
+  <div class="loading-logo">MedNotes</div>
+  <div class="loading-spinner"></div>
+  <div class="loading-msg">Conectando...</div>
+</div>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen" class="hidden">
+  <div class="auth-card">
+    <div class="auth-logo">MedNotes</div>
+    <div class="auth-title">Bloco de Notas Médico</div>
+    <div class="auth-subtitle">Suas anotações clínicas, organizadas.</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Entrar</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">Criar conta</button>
+    </div>
+    <!-- LOGIN -->
+    <div id="form-login" class="auth-form">
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div class="auth-msg" id="login-msg"></div>
+      <button class="auth-btn" onclick="doLogin()">Entrar</button>
+    </div>
+    <!-- REGISTER -->
+    <div id="form-register" class="auth-form hidden">
+      <div class="field">
+        <label>Nome completo</label>
+        <input type="text" id="reg-name" placeholder="Dr. João Silva">
+      </div>
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" id="reg-email" placeholder="seu@email.com">
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input type="password" id="reg-pass" placeholder="mínimo 6 caracteres">
+      </div>
+      <div class="field">
+        <label>Confirmar senha</label>
+        <input type="password" id="reg-pass2" placeholder="repita a senha">
+      </div>
+      <div class="auth-msg" id="reg-msg"></div>
+      <button class="auth-btn" onclick="doRegister()">Criar conta</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <span class="topbar-logo">MedNotes</span>
+    <div class="tabbar" id="tabbar"></div>
+    <button class="tab-add" id="btn-add-tab" title="Nova aba" onclick="addTab()">+</button>
+    <div class="topbar-right">
+      <span class="user-pill" id="user-pill">Dr. Nome</span>
+      <button class="btn-logout" onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <span class="toolbar-label">FORMATAÇÃO</span>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" title="Negrito (Ctrl+B)" onclick="fmt('bold')"><b>B</b></button>
+    <button class="toolbar-btn" title="Itálico (Ctrl+I)" onclick="fmt('italic')"><i>I</i></button>
+    <button class="toolbar-btn" title="Sublinhado (Ctrl+U)" onclick="fmt('underline')"><u>U</u></button>
+    <button class="toolbar-btn" title="Tachado" onclick="fmt('strikeThrough')"><s>S</s></button>
+    <div class="toolbar-sep"></div>
+    <span class="toolbar-label">DESTAQUE</span>
+    <button class="toolbar-color" style="background:#fef08a" title="Amarelo" onclick="highlight('#fef08a')"></button>
+    <button class="toolbar-color" style="background:#bbf7d0" title="Verde" onclick="highlight('#bbf7d0')"></button>
+    <button class="toolbar-color" style="background:#bfdbfe" title="Azul" onclick="highlight('#bfdbfe')"></button>
+    <button class="toolbar-color" style="background:#fecaca" title="Vermelho" onclick="highlight('#fecaca')"></button>
+    <div class="toolbar-sep"></div>
+    <span class="toolbar-label">LISTAS</span>
+    <button class="toolbar-btn" onclick="fmt('insertUnorderedList')">• Lista</button>
+    <button class="toolbar-btn" onclick="fmt('insertOrderedList')">1. Numerada</button>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" onclick="clearFormat()">⊘ Limpar</button>
+  </div>
+
+  <!-- EDITOR AREA -->
+  <div class="editor-wrap" id="editor-wrap"></div>
+
+  <!-- STATUS BAR -->
+  <div class="statusbar" id="statusbar">
+    <span id="status-tab">—</span>
+    <span id="status-chars">0 caracteres</span>
+    <span id="status-saved">☁ Conectando...</span>
+  </div>
+</div>
+
+
+
+<script>
+// ══════════════════════════════════════
+// FIREBASE CONFIG
+// ══════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyCBziafGOowx77z5GmQAf4y8XDBHoXinHU",
+  authDomain: "mednotesigor.firebaseapp.com",
+  databaseURL: "https://mednotesigor-default-rtdb.firebaseio.com",
+  projectId: "mednotesigor",
+  storageBucket: "mednotesigor.firebasestorage.app",
+  messagingSenderId: "97894871659",
+  appId: "1:97894871659:web:539868aefc0a42392f772e"
+};
+
+firebase.initializeApp(firebaseConfig);
+const rtdb = firebase.database();
+
+// ══════════════════════════════════════
+// LOCAL STORAGE HELPERS (para sessão e usuários)
+// ══════════════════════════════════════
+const LOCAL = {
+  get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
+  del: k => localStorage.removeItem(k)
+};
+
+// ══════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════
+let currentUser = null;
+
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
+  document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
+  document.getElementById('form-register').classList.toggle('hidden', tab !== 'register');
+}
+
+// Converte e-mail para chave Firebase segura
+function emailToKey(email) {
+  return email.replace(/\./g, '_dot_').replace(/@/g, '_at_');
+}
+
+async function doRegister() {
+  const name  = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim().toLowerCase();
+  const pass  = document.getElementById('reg-pass').value;
+  const pass2 = document.getElementById('reg-pass2').value;
+  const msg   = document.getElementById('reg-msg');
+  msg.textContent = '';
+
+  if (!name || !email || !pass) return msg.textContent = 'Preencha todos os campos.';
+  if (pass.length < 6) return msg.textContent = 'Senha mínimo 6 caracteres.';
+  if (pass !== pass2) return msg.textContent = 'Senhas não coincidem.';
+  if (!/\S+@\S+\.\S+/.test(email)) return msg.textContent = 'E-mail inválido.';
+
+  msg.textContent = 'Criando conta...';
+  const key = emailToKey(email);
+
+  try {
+    const snap = await rtdb.ref('users/' + key).once('value');
+    if (snap.exists()) return msg.textContent = 'E-mail já cadastrado.';
+
+    await rtdb.ref('users/' + key).set({ name, email, pass });
+    loginAs({ name, email });
+  } catch(e) {
+    msg.textContent = 'Erro ao criar conta. Verifique sua conexão.';
+  }
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pass  = document.getElementById('login-pass').value;
+  const msg   = document.getElementById('login-msg');
+  msg.textContent = '';
+
+  if (!email || !pass) return msg.textContent = 'Preencha e-mail e senha.';
+
+  msg.textContent = 'Entrando...';
+  const key = emailToKey(email);
+
+  try {
+    const snap = await rtdb.ref('users/' + key).once('value');
+    if (!snap.exists()) return msg.textContent = 'E-mail ou senha incorretos.';
+    const u = snap.val();
+    if (u.pass !== pass) return msg.textContent = 'E-mail ou senha incorretos.';
+    loginAs(u);
+  } catch(e) {
+    msg.textContent = 'Erro de conexão. Tente novamente.';
+  }
+}
+
+function loginAs(u) {
+  currentUser = u;
+  LOCAL.set('mednotes_session', u);
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('user-pill').textContent = u.name;
+  loadUserData();
+}
+
+function doLogout() {
+  saveAll();
+  LOCAL.del('mednotes_session');
+  currentUser = null;
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+  tabs = [];
+  activeTab = null;
+  tabCounter = 0;
+  document.getElementById('tabbar').innerHTML = '';
+  document.getElementById('editor-wrap').innerHTML = '';
+}
+
+// ══════════════════════════════════════
+// TABS & EDITORS
+// ══════════════════════════════════════
+let tabs = [];
+let activeTab = null;
+let tabCounter = 0;
+
+async function loadUserData() {
+  setStatus('saved', '☁ Carregando...');
+  const key = emailToKey(currentUser.email);
+
+  try {
+    const snap = await rtdb.ref('notes/' + key).once('value');
+    tabs = [];
+    tabCounter = 0;
+    document.getElementById('tabbar').innerHTML = '';
+    document.getElementById('editor-wrap').innerHTML = '';
+
+    if (snap.exists()) {
+      const data = snap.val();
+      if (data.tabs && data.tabs.length) {
+        data.tabs.forEach(t => createTab(t.name, t.content));
+        setActiveTab(tabs[data.activeIdx] ? data.activeIdx : 0);
+        setStatus('saved', '☁ Sincronizado');
+        return;
+      }
+    }
+
+    // Sem dados na nuvem — tenta migrar do localStorage
+    const localKey = 'mednotes_data_' + currentUser.email;
+    const localData = LOCAL.get(localKey);
+    if (localData && localData.tabs && localData.tabs.length) {
+      localData.tabs.forEach(t => createTab(t.name, t.content));
+      setActiveTab(tabs[localData.activeIdx] ? localData.activeIdx : 0);
+      setStatus('saved', '⬆ Migrando para nuvem...');
+      await saveAll();
+      LOCAL.del(localKey);
+      setStatus('saved', '☁ Migrado com sucesso!');
+    } else {
+      createTab('', '');
+      setActiveTab(0);
+      setStatus('saved', '☁ Pronto');
+    }
+  } catch(e) {
+    // Fallback para localStorage se offline
+    const localKey = 'mednotes_data_' + currentUser.email;
+    const localData = LOCAL.get(localKey);
+    tabs = []; tabCounter = 0;
+    document.getElementById('tabbar').innerHTML = '';
+    document.getElementById('editor-wrap').innerHTML = '';
+    if (localData && localData.tabs && localData.tabs.length) {
+      localData.tabs.forEach(t => createTab(t.name, t.content));
+      setActiveTab(tabs[localData.activeIdx] ? localData.activeIdx : 0);
+    } else {
+      createTab('', '');
+      setActiveTab(0);
+    }
+    setStatus('saved', '⚠ Offline — salvo localmente');
+  }
+}
+
+async function saveAll() {
+  if (!currentUser) return;
+  syncActiveContent();
+  const key = emailToKey(currentUser.email);
+  const activeIdx = tabs.findIndex(t => t.id === activeTab);
+  const data = { tabs: tabs.map(t => ({ name: t.name, content: t.content })), activeIdx };
+
+  // Salva localmente sempre (fallback offline)
+  LOCAL.set('mednotes_data_' + currentUser.email, data);
+
+  try {
+    await rtdb.ref('notes/' + key).set(data);
+    setStatus('saved', '☁ Salvo ' + new Date().toLocaleTimeString('pt-BR'));
+  } catch(e) {
+    setStatus('saved', '⚠ Offline — salvo localmente');
+  }
+}
+
+function syncActiveContent() {
+  const t = tabs.find(t => t.id === activeTab);
+  if (!t) return;
+  const el = document.getElementById('page-' + t.id);
+  if (el) t.content = el.querySelector('.editor-content').innerHTML;
+}
+
+function createTab(name, content='') {
+  const id = ++tabCounter;
+  tabs.push({ id, name, content });
+
+  const tab = document.createElement('div');
+  tab.className = 'tab';
+  tab.dataset.id = id;
+  tab.innerHTML = `
+    <span class="tab-label" ondblclick="startRename(${id})">${name}</span>
+    <button class="tab-close" onclick="closeTab(event,${id})">✕</button>
+  `;
+  tab.draggable = true;
+  tab.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', id); setTimeout(() => tab.classList.add('dragging'), 0); });
+  tab.addEventListener('dragend', () => tab.classList.remove('dragging'));
+  tab.addEventListener('dragover', e => { e.preventDefault(); tab.classList.add('drag-over'); });
+  tab.addEventListener('dragleave', () => tab.classList.remove('drag-over'));
+  tab.addEventListener('drop', e => {
+    e.preventDefault(); tab.classList.remove('drag-over');
+    const fromId = Number(e.dataTransfer.getData('text/plain')); const toId = id;
+    if (fromId === toId) return;
+    const fromIdx = tabs.findIndex(t => t.id === fromId); const toIdx = tabs.findIndex(t => t.id === toId);
+    const [moved] = tabs.splice(fromIdx, 1); tabs.splice(toIdx, 0, moved);
+    const tabbar = document.getElementById('tabbar');
+    const allTabs = [...tabbar.querySelectorAll('.tab')];
+    tabs.forEach(t => { const el = allTabs.find(el => Number(el.dataset.id) === t.id); if (el) tabbar.appendChild(el); });
+  });
+  tab.addEventListener('click', () => setActiveTab(id));
+  document.getElementById('tabbar').appendChild(tab);
+
+  const page = document.createElement('div');
+  page.id = 'page-' + id;
+  page.style.display = 'none';
+  page.innerHTML = `<div class="editor-page"><div class="editor-content" contenteditable="true" spellcheck="false">${content}</div></div>`;
+  const edContent = page.querySelector('.editor-content');
+  edContent.addEventListener('input', () => { updateStatus(); syncFirstLineTitle(id); });
+  document.getElementById('editor-wrap').appendChild(page);
+
+  return id;
+}
+
+function syncFirstLineTitle(id) {
+  const t = tabs.find(t => t.id === id);
+  if (!t) return;
+  const ed = document.querySelector('#page-' + id + ' .editor-content');
+  if (!ed) return;
+  const fullText = ed.innerText || '';
+  const firstWord = fullText.split('\n')[0].trim().split(/\s+/)[0];
+  const newName = firstWord || '...';
+  if (t.name !== newName) {
+    t.name = newName;
+    const lbl = document.querySelector(`.tab[data-id="${id}"] .tab-label`);
+    if (lbl) lbl.textContent = newName;
+    if (activeTab === id) setStatus('tab', newName);
+  }
+  ed.classList.toggle('has-content', fullText.trim().length > 0);
+}
+
+function addTab() {
+  const id = createTab('', '');
+  setActiveTab(id);
+  setTimeout(() => { const ed = document.querySelector('#page-' + id + ' .editor-content'); if (ed) ed.focus(); }, 60);
+}
+
+function setActiveTab(idOrIdx) {
+  let id = idOrIdx;
+  if (typeof idOrIdx === 'number' && idOrIdx < tabs.length && tabs[idOrIdx]) id = tabs[idOrIdx].id;
+  syncActiveContent();
+  activeTab = id;
+  document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', Number(el.dataset.id) === id));
+  tabs.forEach(t => { const p = document.getElementById('page-' + t.id); if (p) p.style.display = (t.id === id) ? 'block' : 'none'; });
+  const t = tabs.find(t => t.id === id);
+  if (t) setStatus('tab', t.name);
+  updateStatus();
+  syncFirstLineTitle(id);
+}
+
+function closeTab(e, id) {
+  e.stopPropagation();
+  if (tabs.length === 1) { alert('Mantenha pelo menos uma aba.'); return; }
+  syncActiveContent();
+  const idx = tabs.findIndex(t => t.id === id);
+  tabs.splice(idx, 1);
+  document.querySelector(`.tab[data-id="${id}"]`)?.remove();
+  document.getElementById('page-' + id)?.remove();
+  if (activeTab === id) setActiveTab(tabs[Math.max(0, idx-1)].id);
+}
+
+function startRename(id) {
+  const tabEl = document.querySelector(`.tab[data-id="${id}"]`);
+  if (!tabEl) return;
+  const lbl = tabEl.querySelector('.tab-label');
+  const t = tabs.find(t => t.id === id);
+  const prev = t.name;
+  lbl.innerHTML = `<input class="tab-input" value="${prev}" maxlength="20">`;
+  const inp = lbl.querySelector('input');
+  inp.focus(); inp.select();
+  const finish = () => { const newName = inp.value.trim() || prev; t.name = newName; lbl.textContent = newName; if (activeTab === id) setStatus('tab', newName); };
+  inp.addEventListener('blur', finish);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') { inp.value = prev; inp.blur(); } });
+}
+
+// ══════════════════════════════════════
+// FORMATTING
+// ══════════════════════════════════════
+function getActiveEditor() {
+  const t = tabs.find(t => t.id === activeTab);
+  if (!t) return null;
+  return document.querySelector('#page-' + t.id + ' .editor-content');
+}
+function fmt(cmd) { const ed = getActiveEditor(); if (ed) { ed.focus(); document.execCommand(cmd, false, null); } }
+function highlight(color) { const ed = getActiveEditor(); if (ed) { ed.focus(); document.execCommand('hiliteColor', false, color); } }
+function clearFormat() { const ed = getActiveEditor(); if (ed) { ed.focus(); document.execCommand('removeFormat', false, null); } }
+
+
+
+
+// ══════════════════════════════════════
+// STATUS BAR
+// ══════════════════════════════════════
+function setStatus(key, val) {
+  if (key === 'tab') document.getElementById('status-tab').textContent = val;
+  if (key === 'saved') document.getElementById('status-saved').textContent = val;
+  if (key === 'chars') document.getElementById('status-chars').textContent = val;
+}
+function updateStatus() {
+  const ed = getActiveEditor();
+  if (!ed) return;
+  const len = ed.innerText.length;
+  setStatus('chars', len + ' caractere' + (len!==1?'s':''));
+}
+
+// Ctrl+S
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveAll(); }
+});
+
+// Auto-save a cada 5s
+setInterval(() => { if (currentUser) saveAll(); }, 5000);
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+(async function() {
+  const sess = LOCAL.get('mednotes_session');
+  if (sess && sess.email) {
+    const key = emailToKey(sess.email);
+    try {
+      const snap = await rtdb.ref('users/' + key).once('value');
+      if (snap.exists()) {
+        document.getElementById('loading-screen').classList.add('hidden');
+        loginAs(snap.val());
+        return;
+      }
+    } catch(e) {
+      // offline — usa sessão local
+      document.getElementById('loading-screen').classList.add('hidden');
+      loginAs(sess);
+      return;
+    }
+  }
+  document.getElementById('loading-screen').classList.add('hidden');
+  document.getElementById('auth-screen').classList.remove('hidden');
+})();
+</script>
+</body>
+</html>
