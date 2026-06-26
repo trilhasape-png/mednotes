@@ -18,11 +18,15 @@
     --radius: 8px;
   }
 
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
   body {
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background: #f5f6f8;
-    color: var(--text);
-    min-height: 100vh;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #3b82f6 100%);
+    color: #fff;
     display: flex;
     flex-direction: column;
   }
@@ -30,161 +34,111 @@
   /* ── NAVBAR ── */
   nav {
     position: fixed; top: 0; left: 0; right: 0;
-    height: 56px;
-    background: rgba(255,255,255,0.92);
-    backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--border);
+    height: 64px;
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
     display: flex; align-items: center;
     padding: 0 32px;
     justify-content: space-between;
     z-index: 100;
   }
   .nav-logo {
-    font-size: 14px; font-weight: 800; letter-spacing: 2px;
-    color: var(--primary); text-transform: uppercase;
+    font-size: 16px; font-weight: 800; letter-spacing: 2px;
+    color: #fff; text-transform: uppercase;
   }
-  .nav-actions { display: flex; gap: 10px; align-items: center; }
-  .btn-outline {
-    padding: 7px 18px; border: 1.5px solid var(--primary);
+  .nav-actions { display: flex; gap: 12px; align-items: center; }
+  
+  .btn-nav-outline {
+    padding: 8px 20px; border: 1.5px solid rgba(255,255,255,0.5);
     border-radius: var(--radius); font-size: 13px; font-weight: 600;
-    color: var(--primary); background: none; cursor: pointer;
-    transition: all .15s; text-decoration: none; display: inline-block;
+    color: #fff; background: none; cursor: pointer;
+    transition: all .15s; text-decoration: none;
   }
-  .btn-outline:hover { background: var(--primary); color: #fff; }
-  .btn-primary {
-    padding: 7px 18px; border: 1.5px solid var(--primary);
-    border-radius: var(--radius); font-size: 13px; font-weight: 600;
-    color: #fff; background: var(--primary); cursor: pointer;
-    transition: all .15s; text-decoration: none; display: inline-block;
-  }
-  .btn-primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
+  .btn-nav-outline:hover { border-color: #fff; background: rgba(255,255,255,0.1); }
 
-  /* ── HERO ── */
-  .hero {
-    margin-top: 56px;
-    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #3b82f6 100%);
-    padding: 80px 32px 90px;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
+  .btn-nav-primary {
+    padding: 8px 20px; border: 1.5px solid #fff;
+    border-radius: var(--radius); font-size: 13px; font-weight: 600;
+    color: var(--primary); background: #fff; cursor: pointer;
+    transition: all .15s; text-decoration: none;
   }
+  .btn-nav-primary:hover { background: #f0f4ff; transform: translateY(-1px); }
+
+  /* ── HERO (FULL SCREEN) ── */
+  .hero {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 24px;
+    position: relative;
+  }
+  
   .hero::before {
     content: '';
     position: absolute; inset: 0;
-    background: radial-gradient(ellipse at 70% 50%, rgba(255,255,255,0.06) 0%, transparent 60%);
+    background: radial-gradient(ellipse at center, rgba(255,255,255,0.08) 0%, transparent 70%);
+    pointer-events: none;
   }
+
   .hero-badge {
     display: inline-block;
     background: rgba(255,255,255,0.15);
     color: rgba(255,255,255,0.9);
     font-size: 11px; font-weight: 700; letter-spacing: 2px;
-    text-transform: uppercase; padding: 5px 14px;
-    border-radius: 20px; margin-bottom: 24px;
+    text-transform: uppercase; padding: 6px 16px;
+    border-radius: 20px; margin-bottom: 28px;
     border: 1px solid rgba(255,255,255,0.2);
+    animation: fadeInDown 0.8s ease-out;
   }
+
   .hero h1 {
-    font-size: 48px; font-weight: 800; color: #fff;
-    line-height: 1.15; margin-bottom: 16px; position: relative;
+    font-size: clamp(32px, 8vw, 56px);
+    font-weight: 800; color: #fff;
+    line-height: 1.1; margin-bottom: 20px;
+    max-width: 900px;
+    animation: fadeInUp 0.8s ease-out 0.2s backwards;
   }
   .hero h1 span { color: #93c5fd; }
+
   .hero-sub {
-    font-size: 18px; color: rgba(255,255,255,0.75);
-    max-width: 520px; margin: 0 auto 36px; line-height: 1.6;
+    font-size: clamp(16px, 2vw, 20px);
+    color: rgba(255,255,255,0.8);
+    max-width: 600px; margin: 0 auto 40px; line-height: 1.6;
+    animation: fadeInUp 0.8s ease-out 0.4s backwards;
   }
-  .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-  .btn-hero-primary {
-    padding: 14px 32px; background: #fff; color: var(--primary);
-    border: none; border-radius: var(--radius); font-size: 15px;
-    font-weight: 700; cursor: pointer; transition: all .15s;
+
+  .hero-actions { 
+    display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+    animation: fadeInUp 0.8s ease-out 0.6s backwards;
+  }
+
+  .btn-main {
+    padding: 16px 40px; background: #fff; color: var(--primary);
+    border: none; border-radius: var(--radius); font-size: 16px;
+    font-weight: 700; cursor: pointer; transition: all .2s;
     text-decoration: none; display: inline-block;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
   }
-  .btn-hero-primary:hover { background: #f0f4ff; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
-  .btn-hero-outline {
-    padding: 14px 32px; background: transparent; color: #fff;
-    border: 2px solid rgba(255,255,255,0.5); border-radius: var(--radius);
-    font-size: 15px; font-weight: 700; cursor: pointer; transition: all .15s;
-    text-decoration: none; display: inline-block;
-  }
-  .btn-hero-outline:hover { border-color: #fff; background: rgba(255,255,255,0.1); }
+  .btn-main:hover { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(0,0,0,0.2); background: #f8faff; }
 
-  /* ── AVISO ── */
-  .section { max-width: 860px; margin: 0 auto; padding: 48px 24px; }
-  .section-title {
-    font-size: 11px; font-weight: 700; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--primary); margin-bottom: 12px;
+  /* ── ANIMATIONS ── */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
   }
-
-  .avisos-box {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-  }
-  .avisos-header {
-    background: linear-gradient(90deg, #1e3a5f, #2563eb);
-    padding: 14px 20px;
-    display: flex; align-items: center; gap: 10px;
-  }
-  .avisos-header-icon { font-size: 16px; }
-  .avisos-header-title { font-size: 14px; font-weight: 700; color: #fff; }
-  .avisos-list { padding: 8px 0; }
-  .aviso-item {
-    display: flex; align-items: flex-start; gap: 12px;
-    padding: 14px 20px; border-bottom: 1px solid #f3f4f6;
-    transition: background .12s;
-  }
-  .aviso-item:last-child { border-bottom: none; }
-  .aviso-item:hover { background: #f9fafb; }
-  .aviso-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--primary); flex-shrink: 0; margin-top: 5px;
-  }
-  .aviso-dot.verde { background: #16a34a; }
-  .aviso-dot.amarelo { background: #d97706; }
-  .aviso-text { font-size: 14px; color: var(--text); line-height: 1.5; }
-  .aviso-data { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
-  .avisos-empty {
-    padding: 32px 20px; text-align: center;
-    font-size: 13px; color: var(--text-muted);
-  }
-
-  /* ── FEATURES ── */
-  .features-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 16px; margin-top: 16px;
-  }
-  .feature-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 24px 20px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-    transition: transform .15s, box-shadow .15s;
-  }
-  .feature-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
-  .feature-icon { font-size: 28px; margin-bottom: 12px; }
-  .feature-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-  .feature-desc { font-size: 13px; color: var(--text-muted); line-height: 1.55; }
-
-  /* ── CTA FINAL ── */
-  .cta-section {
-    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
-    padding: 56px 24px; text-align: center; margin-top: 16px;
-  }
-  .cta-section h2 { font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 10px; }
-  .cta-section p { font-size: 15px; color: rgba(255,255,255,0.75); margin-bottom: 28px; }
-
-  /* ── FOOTER ── */
-  footer {
-    background: #1a1d23; color: rgba(255,255,255,0.4);
-    text-align: center; padding: 20px;
-    font-size: 12px;
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   @media (max-width: 600px) {
-    .hero h1 { font-size: 32px; }
-    .hero-sub { font-size: 15px; }
     nav { padding: 0 16px; }
-    .section { padding: 36px 16px; }
+    .nav-logo { font-size: 14px; }
+    .hero { padding-top: 64px; }
   }
 </style>
 </head>
@@ -194,88 +148,20 @@
 <nav>
   <div class="nav-logo">MedNotes</div>
   <div class="nav-actions">
-    <a href="/index" class="btn-outline">Entrar</a>
-    <a href="/index" class="btn-primary">Criar conta</a>
+    <a href="/index" class="btn-nav-outline">Entrar</a>
+    <a href="/index" class="btn-nav-primary">Criar conta</a>
   </div>
 </nav>
 
-<!-- HERO -->
-<section class="hero">
+<!-- MAIN CONTENT -->
+<main class="hero">
   <div class="hero-badge">🩺 Plataforma Médica</div>
   <h1>Suas anotações clínicas,<br><span>organizadas e seguras.</span></h1>
   <p class="hero-sub">O MedNotes foi criado para médicos que precisam de agilidade, organização e segurança no dia a dia clínico.</p>
   <div class="hero-actions">
-    <a href="/index" class="btn-hero-primary">Começar agora — é grátis</a>
-    <a href="#features" class="btn-hero-outline">Conhecer recursos</a>
+    <a href="/index" class="btn-main">Começar agora — é grátis</a>
   </div>
-</section>
-
-<!-- AVISOS -->
-<div class="section">
-  <div class="section-title">📢 Avisos e Atualizações</div>
-  <div class="avisos-box">
-    <div class="avisos-header">
-      <span class="avisos-header-icon">🔔</span>
-      <span class="avisos-header-title">Mural de Avisos</span>
-    </div>
-    <div class="avisos-list">
-      <div class="aviso-item">
-        <div class="aviso-dot verde"></div>
-        <div>
-          <div class="aviso-text">Bem-vindo ao MedNotes! A plataforma está em versão beta. Fique à vontade para explorar.</div>
-          <div class="aviso-data">26 jun 2026</div>
-        </div>
-      </div>
-      <div class="aviso-item">
-        <div class="aviso-dot amarelo"></div>
-        <div>
-          <div class="aviso-text">Em breve: tela de perfil, gerador de quiz e calculadoras clínicas.</div>
-          <div class="aviso-data">26 jun 2026</div>
-        </div>
-      </div>
-      <!-- Adicione novos avisos aqui -->
-    </div>
-  </div>
-</div>
-
-<!-- FEATURES -->
-<div class="section" id="features">
-  <div class="section-title">✨ Recursos</div>
-  <div class="features-grid">
-    <div class="feature-card">
-      <div class="feature-icon">📝</div>
-      <div class="feature-title">Bloco de Notas</div>
-      <div class="feature-desc">Crie e organize suas anotações clínicas com abas, formatação e salvamento automático na nuvem.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">☁️</div>
-      <div class="feature-title">Sincronização</div>
-      <div class="feature-desc">Suas notas ficam salvas e acessíveis de qualquer dispositivo, em tempo real.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🔒</div>
-      <div class="feature-title">Segurança</div>
-      <div class="feature-desc">Acesso protegido por login. Cada médico vê apenas suas próprias anotações.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">⚡</div>
-      <div class="feature-title">Rápido e simples</div>
-      <div class="feature-desc">Interface limpa, sem distrações. Focado no que importa: sua prática clínica.</div>
-    </div>
-  </div>
-</div>
-
-<!-- CTA FINAL -->
-<div class="cta-section">
-  <h2>Pronto para começar?</h2>
-  <p>Crie sua conta gratuitamente e organize sua rotina médica hoje.</p>
-  <a href="/index" class="btn-hero-primary">Acessar o MedNotes</a>
-</div>
-
-<!-- FOOTER -->
-<footer>
-  © 2026 MedNotes · Feito para médicos
-</footer>
+</main>
 
 </body>
 </html>
