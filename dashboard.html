@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedNotes — Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --text: #1a1d23;
+    --text-muted: #6b7280;
+    --border: #e2e5ea;
+    --surface: #ffffff;
+    --radius: 12px;
+  }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #f5f6f8;
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── NAVBAR FIXO ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 60px;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 32px;
+    justify-content: space-between;
+    z-index: 100;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  }
+  .nav-left { display: flex; align-items: center; gap: 24px; }
+  .nav-logo {
+    font-size: 14px; font-weight: 800; letter-spacing: 2px;
+    color: var(--primary); text-transform: uppercase;
+  }
+  .nav-menu { display: flex; gap: 20px; }
+  .nav-link {
+    text-decoration: none; font-size: 14px; font-weight: 600;
+    color: var(--text-muted); transition: color .15s;
+  }
+  .nav-link:hover, .nav-link.active { color: var(--primary); }
+
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+  .user-info { font-size: 13px; font-weight: 600; color: var(--text); }
+  .btn-logout {
+    padding: 6px 12px; border: 1px solid var(--border);
+    border-radius: 6px; font-size: 12px; font-weight: 600;
+    color: var(--text-muted); text-decoration: none; transition: all .15s;
+  }
+  .btn-logout:hover { color: #dc2626; border-color: #dc2626; }
+
+  /* ── CONTEÚDO PRINCIPAL ── */
+  main {
+    margin-top: 60px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+  }
+
+  .welcome-section { text-align: center; margin-bottom: 48px; }
+  .welcome-section h1 { font-size: 32px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+  .welcome-section p { font-size: 16px; color: var(--text-muted); }
+
+  .options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    width: 100%;
+    max-width: 800px;
+  }
+
+  .option-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 40px 32px;
+    text-align: center;
+    text-decoration: none;
+    transition: all .2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+  }
+  .option-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+    border-color: var(--primary);
+  }
+
+  .option-icon {
+    font-size: 48px;
+    margin-bottom: 20px;
+    background: #f0f4ff;
+    width: 100px; height: 100px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    color: var(--primary);
+  }
+  .option-card:nth-child(2) .option-icon { background: #fff7ed; color: #f97316; }
+
+  .option-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
+  .option-desc { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+
+  @media (max-width: 600px) {
+    .nav-menu { display: none; }
+    .welcome-section h1 { font-size: 24px; }
+    .options-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <div class="nav-logo">MedNotes</div>
+    <div class="nav-menu">
+      <a href="dashboard.html" class="nav-link active">Início</a>
+      <a href="notas.html" class="nav-link">Notas</a>
+      <a href="#" class="nav-link">Quiz</a>
+    </div>
+  </div>
+  <div class="nav-right">
+    <span class="user-info">Dr. João Silva</span>
+    <a href="index.html" class="btn-logout">Sair</a>
+  </div>
+</nav>
+
+<main>
+  <div class="welcome-section">
+    <h1>Olá, Dr. João!</h1>
+    <p>O que você gostaria de fazer hoje?</p>
+  </div>
+
+  <div class="options-grid">
+    <!-- OPÇÃO NOTAS -->
+    <a href="notas.html" class="option-card">
+      <div class="option-icon">📝</div>
+      <h2 class="option-title">Bloco de Notas</h2>
+      <p class="option-desc">Organize suas anotações clínicas, diagnósticos e condutas de forma segura.</p>
+    </a>
+
+    <!-- OPÇÃO QUIZ -->
+    <a href="#" class="option-card">
+      <div class="option-icon">🧠</div>
+      <h2 class="option-title">Realizar Quiz</h2>
+      <p class="option-desc">Teste seus conhecimentos com questões baseadas em casos clínicos e diretrizes.</p>
+    </a>
+  </div>
+</main>
+
+</body>
+</html>
