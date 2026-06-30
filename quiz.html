@@ -116,23 +116,45 @@
     letter-spacing: .8px;
     margin-bottom: 8px;
   }
-  .select-box {
-    width: 100%; padding: 13px 40px 13px 14px; border: 1.5px solid var(--border);
+  /* ── DROPDOWN CUSTOMIZADO ── */
+  .custom-select { position: relative; }
+  .select-trigger {
+    width: 100%; padding: 13px 14px; border: 1.5px solid var(--border);
     border-radius: 10px; font-size: 14px; outline: none; background: #fff;
     font-weight: 600; color: var(--text);
-    transition: border-color .15s, box-shadow .15s;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='5 7.5 10 12.5 15 7.5'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
-    background-size: 16px;
-    cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; transition: border-color .15s, box-shadow .15s;
+    font-family: inherit;
   }
-  .select-box:hover { border-color: #c7d2fe; }
-  .select-box:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(37,99,235,0.12); }
-  .select-box::-ms-expand { display: none; }
+  .select-trigger:hover { border-color: #c7d2fe; }
+  .custom-select.open .select-trigger { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(37,99,235,0.12); }
+  .select-chevron { color: var(--primary); flex-shrink: 0; transition: transform .15s; }
+  .custom-select.open .select-chevron { transform: rotate(180deg); }
+
+  .select-options {
+    list-style: none;
+    position: absolute; top: calc(100% + 8px); left: 0; right: 0;
+    background: #fff; border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 16px 32px -12px rgba(15,23,42,0.18);
+    padding: 6px; z-index: 50;
+    opacity: 0; visibility: hidden; transform: translateY(-6px);
+    transition: all .15s ease;
+  }
+  .custom-select.open .select-options { opacity: 1; visibility: visible; transform: translateY(0); }
+  .select-options li {
+    padding: 11px 14px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    color: var(--text); cursor: pointer; transition: background .12s;
+  }
+  .select-options li:hover { background: #f5f8ff; }
+  .select-options li.selected { background: var(--primary); color: #fff; }
+  .select-options li.selected:hover { background: var(--primary-dark); }
+
+  /* ── (legado, caso o select nativo apareça) ── */
+  .select-box {
+    width: 100%; padding: 13px 14px; border: 1.5px solid var(--border);
+    border-radius: 10px; font-size: 14px; outline: none; background: #fff;
+    font-weight: 600; color: var(--text);
+  }
 
   /* ── UPLOAD ── */
   .upload-area {
@@ -238,14 +260,34 @@
     <div class="setup-grid">
       <div class="config-item">
         <label>Nível de Dificuldade</label>
-        <select class="select-box" id="difficulty">
+        <div class="custom-select" id="difficultyCustom">
+          <button type="button" class="select-trigger">
+            <span class="select-trigger-text">Médio (Conceitual)</span>
+            <svg class="select-chevron" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 7.5 10 12.5 15 7.5"/></svg>
+          </button>
+          <ul class="select-options">
+            <li data-value="medio" class="selected">Médio (Conceitual)</li>
+            <li data-value="dificil">Difícil (Casos Clínicos / Concursos)</li>
+          </ul>
+        </div>
+        <select class="select-box" id="difficulty" style="display:none">
           <option value="medio">Médio (Conceitual)</option>
           <option value="dificil">Difícil (Casos Clínicos / Concursos)</option>
         </select>
       </div>
       <div class="config-item">
         <label>Quantidade de Questões</label>
-        <select class="select-box" id="qAmount">
+        <div class="custom-select" id="qAmountCustom">
+          <button type="button" class="select-trigger">
+            <span class="select-trigger-text">10 Questões</span>
+            <svg class="select-chevron" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 7.5 10 12.5 15 7.5"/></svg>
+          </button>
+          <ul class="select-options">
+            <li data-value="10" class="selected">10 Questões</li>
+            <li data-value="20">20 Questões</li>
+          </ul>
+        </div>
+        <select class="select-box" id="qAmount" style="display:none">
           <option value="10">10 Questões</option>
           <option value="20">20 Questões</option>
         </select>
@@ -277,6 +319,36 @@
 </main>
 
 <script>
+  // ── DROPDOWN CUSTOMIZADO ──
+  document.querySelectorAll('.custom-select').forEach((wrapper) => {
+    const trigger = wrapper.querySelector('.select-trigger');
+    const triggerText = wrapper.querySelector('.select-trigger-text');
+    const options = wrapper.querySelectorAll('.select-options li');
+    const hiddenSelect = wrapper.nextElementSibling; // <select> escondido logo após
+
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.custom-select.open').forEach(o => { if (o !== wrapper) o.classList.remove('open'); });
+      wrapper.classList.toggle('open');
+    });
+
+    options.forEach((li) => {
+      li.addEventListener('click', () => {
+        options.forEach(o => o.classList.remove('selected'));
+        li.classList.add('selected');
+        triggerText.textContent = li.textContent;
+        if (hiddenSelect && hiddenSelect.tagName === 'SELECT') {
+          hiddenSelect.value = li.dataset.value;
+        }
+        wrapper.classList.remove('open');
+      });
+    });
+  });
+
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.custom-select.open').forEach(o => o.classList.remove('open'));
+  });
+
   // PDF.js worker
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -324,7 +396,7 @@
   });
 
   // ⚠️ Chave pública — uso compartilhado por todos os usuários do site.
-  const GEMINI_API_KEY = "AQ.Ab8RN6KaftuBYNYv8V9VB8KgcjZPFWvFqD_4KTTnmNncqOxeEg";
+  const GEMINI_API_KEY = "AQ.Ab8RN6K3Th5wNLpx6_Tp0v0RIuiA2QB4mNah4TaV-VSV1s_coQ";
   const MODEL = "gemini-2.0-flash";
   const GENERATE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
