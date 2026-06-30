@@ -396,9 +396,10 @@
   });
 
   // ⚠️ Chave pública — uso compartilhado por todos os usuários do site.
-  const GEMINI_API_KEY = "AQ.Ab8RN6K3Th5wNLpx6_Tp0v0RIuiA2QB4mNah4TaV-VSV1s_coQ";
-  const MODEL = "gemini-2.0-flash";
-  const GENERATE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+  // Pegue a sua de graça em: https://console.groq.com/keys
+  const GROQ_API_KEY = "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"; // ex: gsk_xxxxxxxxxxxxxxxx
+  const MODEL = "llama-3.3-70b-versatile";
+  const GENERATE_URL = "https://api.groq.com/openai/v1/chat/completions";
 
   function buildPrompt(difficulty, amount, text) {
     const difficultyInstruction = difficulty === 'medio'
@@ -415,9 +416,11 @@ Cada questão deve ter exatamente 4 alternativas, sendo apenas uma correta. Para
 
 Responda APENAS com um JSON válido, sem texto adicional, sem markdown, no formato:
 
-[
-  { "question": "string", "options": ["a","b","c","d"], "correctIndex": 0, "explanation": "string" }
-]
+{
+  "questions": [
+    { "question": "string", "options": ["a","b","c","d"], "correctIndex": 0, "explanation": "string" }
+  ]
+}
 
 Texto base do material:
 """
@@ -425,26 +428,35 @@ ${text}
 """`;
   }
 
-  async function callGemini(prompt) {
+  async function callGroq(prompt) {
     const res = await fetch(GENERATE_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + GROQ_API_KEY
+      },
       body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.6, responseMimeType: 'application/json' }
+        model: MODEL,
+        messages: [
+          { role: 'system', content: 'Você responde sempre apenas com JSON válido, sem markdown e sem texto adicional.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.6,
+        response_format: { type: 'json_object' }
       })
     });
 
     if (!res.ok) {
       const errText = await res.text();
-      throw new Error('Erro na API Gemini (' + res.status + '): ' + errText.slice(0, 200));
+      throw new Error('Erro na API Groq (' + res.status + '): ' + errText.slice(0, 200));
     }
 
     const data = await res.json();
-    const textOut = data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
+    const textOut = data.choices?.[0]?.message?.content || '';
 
     try {
-      return JSON.parse(textOut);
+      const parsed = JSON.parse(textOut);
+      return Array.isArray(parsed) ? parsed : parsed.questions;
     } catch (e) {
       const match = textOut.match(/\[[\s\S]*\]/);
       if (match) return JSON.parse(match[0]);
@@ -452,7 +464,7 @@ ${text}
     }
   }
 
-  // ── GERAÇÃO REAL DO QUIZ COM GEMINI ──
+  // ── GERAÇÃO REAL DO QUIZ COM GROQ (LLAMA) ──
   generateBtn.addEventListener('click', async () => {
     const difficulty = document.getElementById('difficulty').value;
     const amount = document.getElementById('qAmount').value;
@@ -461,9 +473,9 @@ ${text}
     statusArea.style.display = 'block';
     statusMsg.textContent = "Professor Universitário analisando o material...";
 
-    // O Gemini 2.0 Flash suporta contexto bem amplo (~1M tokens),
-    // então enviamos o texto extraído quase na íntegra, com uma margem de segurança.
-    const MAX_CHARS = 300000;
+    // O modelo llama-3.3-70b-versatile suporta até ~128k tokens de contexto,
+    // então limitamos o texto extraído para caber com folga junto do prompt e da resposta.
+    const MAX_CHARS = 150000;
     const textToProcess = extractedText.length > MAX_CHARS
       ? extractedText.substring(0, MAX_CHARS)
       : extractedText;
@@ -478,7 +490,7 @@ ${text}
     const prompt = buildPrompt(difficulty, amount, textToProcess);
 
     try {
-      const questions = await callGemini(prompt);
+      const questions = await callGroq(prompt);
       if (!Array.isArray(questions) || questions.length === 0) {
         throw new Error('A IA não retornou perguntas válidas.');
       }
