@@ -14,12 +14,14 @@
   :root {
     --primary: #2563eb;
     --primary-dark: #1d4ed8;
+    --primary-light: #93c5fd;
     --text: #1a1d23;
     --text-muted: #6b7280;
     --border: #e2e5ea;
     --surface: #ffffff;
-    --radius: 12px;
+    --radius: 18px;
     --bg: #f5f6f8;
+    --gradient: linear-gradient(135deg, #1d4ed8 0%, #2563eb 45%, #3b82f6 100%);
   }
   body {
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -33,7 +35,7 @@
   /* ── NAVBAR ── */
   nav {
     position: fixed; top: 0; left: 0; right: 0;
-    height: 60px;
+    height: 64px;
     background: #fff;
     border-bottom: 1px solid var(--border);
     display: flex; align-items: center;
@@ -41,17 +43,48 @@
     justify-content: space-between;
     z-index: 100;
   }
-  .nav-left { display: flex; align-items: center; gap: 24px; }
-  .nav-logo { font-size: 14px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 2px; }
-  .nav-menu { display: flex; gap: 20px; }
-  .nav-link { text-decoration: none; font-size: 14px; font-weight: 600; color: var(--text-muted); }
-  .nav-link.active { color: var(--primary); }
+  .nav-left { display: flex; align-items: center; gap: 32px; }
+  .nav-logo { font-size: 16px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 2.5px; }
+  .nav-menu { display: flex; gap: 24px; }
+  .nav-link { text-decoration: none; font-size: 14px; font-weight: 600; color: var(--text-muted); padding-bottom: 4px; border-bottom: 2px solid transparent; transition: all .15s; }
+  .nav-link:hover { color: var(--primary); }
+  .nav-link.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  /* ── HERO ── */
+  .hero {
+    margin-top: 64px;
+    background: var(--gradient);
+    padding: 56px 24px 96px;
+    text-align: center;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #dbeafe;
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-size: 11px; font-weight: 800;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .hero-title {
+    font-size: 38px; font-weight: 800; line-height: 1.2;
+    margin-bottom: 14px;
+  }
+  .hero-title span { color: var(--primary-light); display: block; }
+  .hero-subtitle {
+    font-size: 15px; color: #dbeafe; max-width: 480px;
+    margin: 0 auto; line-height: 1.6;
+  }
 
   /* ── CONTEÚDO ── */
   main {
-    margin-top: 60px;
-    padding: 40px 24px;
-    max-width: 800px;
+    padding: 0 24px 60px;
+    max-width: 760px;
     margin-left: auto;
     margin-right: auto;
     width: 100%;
@@ -61,61 +94,82 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 32px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    padding: 36px;
+    box-shadow: 0 20px 40px -16px rgba(29,78,216,0.18);
+    margin-top: -64px;
+    position: relative;
+    z-index: 2;
   }
-  .card-title { font-size: 24px; font-weight: 800; margin-bottom: 8px; text-align: center; }
-  .card-subtitle { font-size: 14px; color: var(--text-muted); text-align: center; margin-bottom: 32px; }
+  .card-title { font-size: 20px; font-weight: 800; margin-bottom: 6px; text-align: center; }
+  .card-subtitle { font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 28px; }
 
   /* ── CONFIGURAÇÕES ── */
   .setup-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    gap: 16px;
     margin-bottom: 24px;
   }
   .config-item label {
-    display: block; font-size: 12px; font-weight: 700;
+    display: block; font-size: 11px; font-weight: 800;
     color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: .8px;
     margin-bottom: 8px;
   }
   .select-box {
-    width: 100%; padding: 12px; border: 1.5px solid var(--border);
-    border-radius: 8px; font-size: 14px; outline: none; background: #fff;
+    width: 100%; padding: 13px 40px 13px 14px; border: 1.5px solid var(--border);
+    border-radius: 10px; font-size: 14px; outline: none; background: #fff;
+    font-weight: 600; color: var(--text);
+    transition: border-color .15s, box-shadow .15s;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='5 7.5 10 12.5 15 7.5'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px;
+    cursor: pointer;
   }
+  .select-box:hover { border-color: #c7d2fe; }
+  .select-box:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(37,99,235,0.12); }
+  .select-box::-ms-expand { display: none; }
 
   /* ── UPLOAD ── */
   .upload-area {
-    border: 2px dashed var(--border);
-    border-radius: 12px;
-    padding: 40px;
+    display: block;
+    border: 2px dashed #c7d2fe;
+    border-radius: 14px;
+    padding: 36px;
     text-align: center;
     cursor: pointer;
     transition: all .2s;
     margin-bottom: 24px;
-    background: #fafafa;
+    background: #f5f8ff;
   }
-  .upload-area:hover { border-color: var(--primary); background: #f0f4ff; }
-  .upload-icon { font-size: 40px; margin-bottom: 12px; display: block; }
-  .upload-text { font-size: 15px; font-weight: 600; color: var(--text); }
+  .upload-area:hover { border-color: var(--primary); background: #eef3ff; }
+  .upload-icon { font-size: 36px; margin-bottom: 10px; display: block; }
+  .upload-text { font-size: 15px; font-weight: 700; color: var(--text); }
   .upload-hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
   #fileInput { display: none; }
 
   .file-info {
     display: none;
     align-items: center; gap: 12px;
-    padding: 12px 16px; background: #f0fdf4;
-    border: 1px solid #bbf7d0; border-radius: 8px;
+    padding: 14px 18px; background: #f0fdf4;
+    border: 1px solid #bbf7d0; border-radius: 10px;
     margin-bottom: 24px; font-size: 14px;
   }
 
   .btn-generate {
-    width: 100%; padding: 16px; background: var(--primary);
-    color: #fff; border: none; border-radius: 10px;
-    font-size: 16px; font-weight: 700; cursor: pointer;
+    width: 100%; padding: 16px; background: var(--gradient);
+    color: #fff; border: none; border-radius: 999px;
+    font-size: 15px; font-weight: 800; cursor: pointer;
+    letter-spacing: .3px;
+    box-shadow: 0 10px 24px -8px rgba(37,99,235,0.55);
     transition: all .2s;
   }
-  .btn-generate:disabled { background: #cbd5e1; cursor: not-allowed; }
+  .btn-generate:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 14px 28px -8px rgba(37,99,235,0.6); }
+  .btn-generate:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; }
 
   /* ── STATUS / LOADING ── */
   #statusArea { display: none; margin-top: 24px; text-align: center; }
@@ -125,23 +179,31 @@
     animation: spin 1s linear infinite; margin: 0 auto 12px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .status-msg { font-size: 14px; font-weight: 600; color: var(--primary); }
+  .status-msg { font-size: 14px; font-weight: 700; color: var(--primary); }
 
   /* ── QUIZ DISPLAY ── */
-  #quizDisplay { display: none; margin-top: 40px; }
+  #quizDisplay { display: none; margin-top: 24px; padding-top: 24px; }
+  #quizDisplay h2 { font-size: 22px; font-weight: 800; }
   .question-card {
     background: #fff; border: 1px solid var(--border);
-    border-radius: 12px; padding: 24px; margin-bottom: 20px;
+    border-radius: var(--radius); padding: 26px; margin-bottom: 18px;
+    box-shadow: 0 4px 14px -8px rgba(15,23,42,0.08);
   }
-  .q-num { font-size: 12px; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 8px; }
-  .q-text { font-size: 16px; font-weight: 700; margin-bottom: 20px; line-height: 1.5; }
+  .q-num {
+    display: inline-block;
+    font-size: 11px; font-weight: 800; color: var(--primary);
+    text-transform: uppercase; letter-spacing: 1px;
+    background: #eef3ff; padding: 4px 12px; border-radius: 999px;
+    margin-bottom: 14px;
+  }
+  .q-text { font-size: 16px; font-weight: 700; margin-bottom: 20px; line-height: 1.55; }
   .options-list { display: flex; flex-direction: column; gap: 10px; }
   .option-btn {
     padding: 14px 18px; border: 1.5px solid var(--border);
-    border-radius: 8px; text-align: left; background: #fff;
-    font-size: 14px; cursor: pointer; transition: all .15s;
+    border-radius: 12px; text-align: left; background: #fff;
+    font-size: 14px; font-weight: 500; cursor: pointer; transition: all .15s;
   }
-  .option-btn:hover { border-color: var(--primary); background: #f8faff; }
+  .option-btn:hover { border-color: var(--primary); background: #f5f8ff; }
   .option-btn.correct { background: #dcfce7; border-color: #22c55e; color: #166534; font-weight: 700; }
   .option-btn.wrong { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
 </style>
@@ -162,10 +224,16 @@
   </div>
 </nav>
 
+<div class="hero">
+  <div class="hero-badge">🩺 Plataforma Médica</div>
+  <div class="hero-title">Transforme seus PDFs<span>em quizzes inteligentes.</span></div>
+  <div class="hero-subtitle">Envie seu material de estudo e a IA cria questões personalizadas para testar seu conhecimento.</div>
+</div>
+
 <main>
   <div class="card" id="setupCard">
-    <div class="card-title">Gerador de Quiz IA</div>
-    <div class="card-subtitle">Transforme seus PDFs em questões de estudo personalizadas.</div>
+    <div class="card-title">Gerador de Quiz</div>
+    <div class="card-subtitle">Configure as opções e envie o PDF para começar.</div>
 
     <div class="setup-grid">
       <div class="config-item">
@@ -195,7 +263,7 @@
       <span>✅ Arquivo selecionado: <strong id="fileName">...</strong></span>
     </div>
 
-    <button class="btn-generate" id="generateBtn" disabled>Gerar Quiz com Gemini</button>
+    <button class="btn-generate" id="generateBtn" disabled>✨ Gerar Quiz com IA</button>
 
     <div id="statusArea">
       <div class="spinner"></div>
@@ -255,51 +323,103 @@
     }
   });
 
-  // ── LÓGICA DO GERADOR (SIMULADA POR ENQUANTO) ──
+  // ⚠️ Chave pública — uso compartilhado por todos os usuários do site.
+  const GEMINI_API_KEY = "AQ.Ab8RN6KaftuBYNYv8V9VB8KgcjZPFWvFqD_4KTTnmNncqOxeEg";
+  const MODEL = "gemini-2.0-flash";
+  const GENERATE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+  function buildPrompt(difficulty, amount, text) {
+    const difficultyInstruction = difficulty === 'medio'
+      ? 'MÉDIO: perguntas conceituais, definições e relações entre conceitos do material, exigindo compreensão clara do conteúdo.'
+      : 'DIFÍCIL: cada questão deve apresentar um CASO CLÍNICO COMPLEXO criado por você com base no conteúdo do material (história do paciente, sintomas, exames, etc.), exigindo raciocínio clínico avançado e diagnóstico diferencial, em nível de concurso/residência médica.';
+
+    return `Você é um Professor Universitário de Medicina, experiente e didático, especializado em elaborar avaliações para estudantes de medicina.
+
+Leia com atenção todo o texto extraído do material de estudo abaixo e crie um quiz de múltipla escolha em português com exatamente ${amount} questões.
+
+Nível de dificuldade exigido: ${difficultyInstruction}
+
+Cada questão deve ter exatamente 4 alternativas, sendo apenas uma correta. Para questões de nível DÍFICIL, inclua o caso clínico dentro do próprio campo "question" (texto do caso seguido da pergunta).
+
+Responda APENAS com um JSON válido, sem texto adicional, sem markdown, no formato:
+
+[
+  { "question": "string", "options": ["a","b","c","d"], "correctIndex": 0, "explanation": "string" }
+]
+
+Texto base do material:
+"""
+${text}
+"""`;
+  }
+
+  async function callGemini(prompt) {
+    const res = await fetch(GENERATE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.6, responseMimeType: 'application/json' }
+      })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error('Erro na API Gemini (' + res.status + '): ' + errText.slice(0, 200));
+    }
+
+    const data = await res.json();
+    const textOut = data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
+
+    try {
+      return JSON.parse(textOut);
+    } catch (e) {
+      const match = textOut.match(/\[[\s\S]*\]/);
+      if (match) return JSON.parse(match[0]);
+      throw new Error('Não foi possível interpretar a resposta da IA.');
+    }
+  }
+
+  // ── GERAÇÃO REAL DO QUIZ COM GEMINI ──
   generateBtn.addEventListener('click', async () => {
     const difficulty = document.getElementById('difficulty').value;
     const amount = document.getElementById('qAmount').value;
-    
+
+    generateBtn.disabled = true;
     statusArea.style.display = 'block';
     statusMsg.textContent = "Professor Universitário analisando o material...";
 
-    // MÉTODO DE DIVISÃO (CHUNK)
-    // Se o texto for > 30.000 caracteres, pegamos a parte inicial relevante para as perguntas
-    const textToProcess = extractedText.substring(0, 30000); 
+    // O Gemini 2.0 Flash suporta contexto bem amplo (~1M tokens),
+    // então enviamos o texto extraído quase na íntegra, com uma margem de segurança.
+    const MAX_CHARS = 300000;
+    const textToProcess = extractedText.length > MAX_CHARS
+      ? extractedText.substring(0, MAX_CHARS)
+      : extractedText;
 
-    // PROMPT DA PERSONA
-    const prompt = `
-      Você é um Professor Universitário de Medicina renomado. 
-      Sua tarefa é criar um quiz de ${amount} questões baseado no texto fornecido.
-      Nível de dificuldade: ${difficulty === 'medio' ? 'MÉDIO (Conceitos fundamentais e definições)' : 'DIFÍCIL (Casos clínicos complexos e nível de concurso público)'}.
-      Público: Estudantes de Medicina.
-      
-      Formato de resposta: JSON estritamente válido (Array de objetos com: question, options[], correctIndex).
-      
-      Texto base: ${textToProcess}
-    `;
+    if (!textToProcess.trim()) {
+      statusArea.style.display = 'none';
+      generateBtn.disabled = false;
+      alert('Não foi possível extrair texto deste PDF. Verifique se ele não é uma imagem escaneada.');
+      return;
+    }
 
-    console.log("Prompt enviado para o Gemini:", prompt);
+    const prompt = buildPrompt(difficulty, amount, textToProcess);
 
-    // Simulando chamada de API (aqui entra o fetch para o Gemini)
-    setTimeout(() => {
+    try {
+      const questions = await callGemini(prompt);
+      if (!Array.isArray(questions) || questions.length === 0) {
+        throw new Error('A IA não retornou perguntas válidas.');
+      }
       statusArea.style.display = 'none';
       document.getElementById('setupCard').style.display = 'none';
-      renderQuiz(mockQuestions(amount));
-    }, 3000);
-  });
-
-  function mockQuestions(n) {
-    const qs = [];
-    for(let i=1; i<=n; i++) {
-      qs.push({
-        question: `Questão Médica ${i}: Baseado no material extraído, qual a conduta correta para um paciente com os sintomas descritos?`,
-        options: ["Opção A - Conduta Conservadora", "Opção B - Intervenção Cirúrgica", "Opção C - Exames Complementares", "Opção D - Observação"],
-        correctIndex: 1
-      });
+      renderQuiz(questions);
+    } catch (err) {
+      console.error(err);
+      statusArea.style.display = 'none';
+      generateBtn.disabled = false;
+      alert('❌ Erro ao gerar o quiz: ' + err.message);
     }
-    return qs;
-  }
+  });
 
   function renderQuiz(questions) {
     const display = document.getElementById('quizDisplay');
@@ -310,10 +430,13 @@
       const card = document.createElement('div');
       card.className = 'question-card';
       card.innerHTML = `
-        <div class="q-num">Questão ${i+1}</div>
+        <div class="q-num">Questão ${i+1} de ${questions.length}</div>
         <div class="q-text">${q.question}</div>
         <div class="options-list">
           ${q.options.map((opt, idx) => `<button class="option-btn" onclick="checkAnswer(this, ${idx}, ${q.correctIndex})">${opt}</button>`).join('')}
+        </div>
+        <div class="explanation-box" id="exp-${i}" style="display:none; margin-top:14px; padding:12px 16px; background:#f0fdf4; border-left:4px solid #22c55e; border-radius:8px; font-size:13px; line-height:1.6; color:#166534;">
+          ${q.explanation ? '💡 ' + q.explanation : ''}
         </div>
       `;
       display.appendChild(card);
@@ -330,6 +453,12 @@
     } else {
       btn.classList.add('wrong');
       btns[correct].classList.add('correct');
+    }
+
+    const card = parent.parentElement;
+    const expBox = card.querySelector('.explanation-box');
+    if (expBox && expBox.textContent.trim()) {
+      expBox.style.display = 'block';
     }
   };
 
