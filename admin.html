@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedNotes — Painel Admin</title>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --text: #1a1d23;
+    --text-muted: #6b7280;
+    --border: #e2e5ea;
+    --surface: #ffffff;
+    --radius: 12px;
+    --bg: #f5f6f8;
+    --danger: #dc2626;
+    --success: #16a34a;
+  }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── NAVBAR FIXO ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 60px;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 32px;
+    justify-content: space-between;
+    z-index: 100;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  }
+  .nav-left { display: flex; align-items: center; gap: 24px; }
+  .nav-logo {
+    font-size: 14px; font-weight: 800; letter-spacing: 2px;
+    color: var(--primary); text-transform: uppercase;
+  }
+  .nav-tag {
+    font-size: 11px; font-weight: 700; color: #fff; background: var(--danger);
+    padding: 3px 8px; border-radius: 20px; letter-spacing: .5px; text-transform: uppercase;
+  }
+  .btn-back {
+    padding: 6px 12px; border: 1px solid var(--border);
+    border-radius: 6px; font-size: 12px; font-weight: 600;
+    color: var(--text-muted); text-decoration: none; transition: all .15s;
+  }
+  .btn-back:hover { color: var(--primary); border-color: var(--primary); }
+
+  /* ── CONTEÚDO ── */
+  main {
+    margin-top: 60px;
+    padding: 40px 24px;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .page-title { font-size: 26px; font-weight: 800; margin-bottom: 4px; }
+  .page-subtitle { font-size: 14px; color: var(--text-muted); margin-bottom: 8px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  }
+  .card-title {
+    font-size: 16px; font-weight: 700; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* ── STATS ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+  }
+  .stat-card {
+    background: #fff; padding: 22px; border-radius: var(--radius);
+    border: 1px solid var(--border); text-align: center;
+  }
+  .stat-val { font-size: 30px; font-weight: 800; color: var(--primary); }
+  .stat-label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; }
+
+  /* ── FORM ── */
+  .form-row { display: flex; flex-direction: column; gap: 16px; }
+  .form-group label {
+    display: block; font-size: 12px; font-weight: 700;
+    color: var(--text-muted); text-transform: uppercase;
+    margin-bottom: 6px; letter-spacing: 0.5px;
+  }
+  select, textarea, input[type="text"] {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 14px; outline: none;
+    transition: border-color .15s; font-family: inherit;
+  }
+  select:focus, textarea:focus, input:focus { border-color: var(--primary); }
+  textarea { resize: vertical; min-height: 90px; }
+
+  .target-toggle {
+    display: flex; gap: 8px; margin-bottom: 4px;
+  }
+  .target-btn {
+    flex: 1; padding: 10px; border: 1.5px solid var(--border);
+    border-radius: 8px; background: #fff; cursor: pointer;
+    font-size: 13px; font-weight: 700; color: var(--text-muted);
+    transition: all .15s; text-align: center;
+  }
+  .target-btn.active {
+    border-color: var(--primary); color: var(--primary); background: #f0f4ff;
+  }
+
+  .btn-send {
+    padding: 12px; background: var(--primary);
+    color: #fff; border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-send:hover { background: var(--primary-dark); }
+  .btn-send:disabled { opacity: .6; cursor: not-allowed; }
+
+  .send-msg { font-size: 13px; text-align: center; min-height: 18px; }
+
+  /* ── LISTA DE USUÁRIOS ── */
+  .user-list {
+    max-height: 260px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .user-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .user-row:last-child { border-bottom: none; }
+  .user-row-name { font-weight: 700; }
+  .user-row-email { color: var(--text-muted); font-size: 12px; }
+  .loading-text { padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+  @media (max-width: 700px) {
+    main { padding: 24px 16px; }
+    .target-toggle { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <div class="nav-logo">MedNotes</div>
+    <span class="nav-tag">Admin</span>
+  </div>
+  <a href="dashboard.html" class="btn-back">← Voltar ao painel</a>
+</nav>
+
+<main>
+  <div>
+    <div class="page-title">Painel Administrativo</div>
+    <div class="page-subtitle">Envie mensagens e acompanhe os acessos da plataforma.</div>
+  </div>
+
+  <!-- ESTATÍSTICAS -->
+  <div class="card">
+    <div class="card-title">📊 Estatísticas de Acesso</div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-val" id="statTotalVisits">—</div>
+        <div class="stat-label">Acessos Totais</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="statTotalUsers">—</div>
+        <div class="stat-label">Usuários Cadastrados</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENVIO DE MENSAGEM -->
+  <div class="card">
+    <div class="card-title">✉️ Enviar Mensagem</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Destinatário</label>
+        <div class="target-toggle">
+          <button type="button" class="target-btn active" id="btnTargetAll" onclick="setTarget('all')">Todos os usuários</button>
+          <button type="button" class="target-btn" id="btnTargetSpecific" onclick="setTarget('specific')">Usuário específico</button>
+        </div>
+      </div>
+
+      <div class="form-group" id="userSelectGroup" style="display:none;">
+        <label>Selecione o usuário</label>
+        <select id="userSelect">
+          <option value="">Carregando usuários...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Mensagem</label>
+        <textarea id="messageText" placeholder="Digite a mensagem que será enviada..."></textarea>
+      </div>
+
+      <button class="btn-send" id="btnSend" onclick="sendMessage()">Enviar mensagem</button>
+      <div class="send-msg" id="sendMsg"></div>
+    </div>
+  </div>
+
+  <!-- LISTA DE USUÁRIOS CADASTRADOS -->
+  <div class="card">
+    <div class="card-title">👥 Usuários Cadastrados</div>
+    <div class="user-list" id="userList">
+      <div class="loading-text">Carregando...</div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCBziafGOowx77z5GmQAf4y8XDBHoXinHU",
+    authDomain: "mednotesigor.firebaseapp.com",
+    databaseURL: "https://mednotesigor-default-rtdb.firebaseio.com",
+    projectId: "mednotesigor",
+    storageBucket: "mednotesigor.firebasestorage.app",
+    messagingSenderId: "97894871659",
+    appId: "1:97894871659:web:539868aefc0a42392f772e"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const rtdb = firebase.database();
+
+  let currentTarget = 'all';
+  let usersCache = {};
+
+  function setTarget(target) {
+    currentTarget = target;
+    document.getElementById('btnTargetAll').classList.toggle('active', target === 'all');
+    document.getElementById('btnTargetSpecific').classList.toggle('active', target === 'specific');
+    document.getElementById('userSelectGroup').style.display = target === 'specific' ? 'block' : 'none';
+  }
+
+  // Carrega estatísticas de acesso
+  async function loadStats() {
+    try {
+      const snap = await rtdb.ref('stats/visits').once('value');
+      document.getElementById('statTotalVisits').textContent = snap.exists() ? snap.val() : 0;
+    } catch(e) {
+      document.getElementById('statTotalVisits').textContent = 'Erro';
+    }
+  }
+
+  // Carrega lista de usuários
+  async function loadUsers() {
+    try {
+      const snap = await rtdb.ref('users').once('value');
+      const listEl = document.getElementById('userList');
+      const selectEl = document.getElementById('userSelect');
+
+      if (!snap.exists()) {
+        listEl.innerHTML = '<div class="loading-text">Nenhum usuário cadastrado.</div>';
+        selectEl.innerHTML = '<option value="">Nenhum usuário</option>';
+        document.getElementById('statTotalUsers').textContent = 0;
+        return;
+      }
+
+      usersCache = snap.val();
+      const keys = Object.keys(usersCache);
+      document.getElementById('statTotalUsers').textContent = keys.length;
+
+      listEl.innerHTML = '';
+      selectEl.innerHTML = '<option value="">Selecione...</option>';
+
+      keys.forEach(key => {
+        const u = usersCache[key];
+        const row = document.createElement('div');
+        row.className = 'user-row';
+        row.innerHTML = `<div><div class="user-row-name">${u.name || '(sem nome)'}</div><div class="user-row-email">${u.email || ''}</div></div>`;
+        listEl.appendChild(row);
+
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = `${u.name || '(sem nome)'} — ${u.email || ''}`;
+        selectEl.appendChild(opt);
+      });
+    } catch(e) {
+      document.getElementById('userList').innerHTML = '<div class="loading-text">Erro ao carregar usuários.</div>';
+    }
+  }
+
+  // Envia mensagem (para todos ou usuário específico)
+  async function sendMessage() {
+    const text = document.getElementById('messageText').value.trim();
+    const msgEl = document.getElementById('sendMsg');
+    const btn = document.getElementById('btnSend');
+
+    if (!text) {
+      msgEl.textContent = 'Digite uma mensagem antes de enviar.';
+      msgEl.style.color = 'var(--danger)';
+      return;
+    }
+
+    if (currentTarget === 'specific' && !document.getElementById('userSelect').value) {
+      msgEl.textContent = 'Selecione um usuário específico.';
+      msgEl.style.color = 'var(--danger)';
+      return;
+    }
+
+    btn.disabled = true;
+    msgEl.textContent = 'Enviando...';
+    msgEl.style.color = 'var(--text-muted)';
+
+    const payload = {
+      text: text,
+      date: new Date().toISOString(),
+      from: 'admin'
+    };
+
+    try {
+      if (currentTarget === 'all') {
+        const keys = Object.keys(usersCache);
+        const updates = {};
+        keys.forEach(key => {
+          const pushId = rtdb.ref().push().key;
+          updates[`messages/${key}/${pushId}`] = payload;
+        });
+        await rtdb.ref().update(updates);
+      } else {
+        const key = document.getElementById('userSelect').value;
+        await rtdb.ref(`messages/${key}`).push(payload);
+      }
+
+      msgEl.textContent = '✅ Mensagem enviada com sucesso!';
+      msgEl.style.color = 'var(--success)';
+      document.getElementById('messageText').value = '';
+      setTimeout(() => msgEl.textContent = '', 4000);
+    } catch(e) {
+      msgEl.textContent = '❌ Erro ao enviar mensagem. Tente novamente.';
+      msgEl.style.color = 'var(--danger)';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // Inicialização
+  (function() {
+    const sessionData = localStorage.getItem('mednotes_session');
+    if (!sessionData) {
+      window.location.href = 'login.html';
+      return;
+    }
+    loadStats();
+    loadUsers();
+  })();
+</script>
+
+</body>
+</html>
