@@ -121,37 +121,6 @@
     .welcome-section h1 { font-size: 24px; }
     .options-grid { grid-template-columns: 1fr; }
   }
-
-  /* ── BOTÃO DE CONFIGURAÇÃO (engrenagem) ── */
-  .settings-btn {
-    position: fixed;
-    bottom: 14px;
-    right: 14px;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: rgba(37, 99, 235, 0.06);
-    border: 1px solid rgba(37, 99, 235, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: rgba(37, 99, 235, 0.35);
-    opacity: 0.4;
-    transition: opacity .2s, background .2s, transform .2s;
-    z-index: 200;
-  }
-  .settings-btn:hover {
-    opacity: 1;
-    background: rgba(37, 99, 235, 0.15);
-    color: var(--primary);
-    transform: rotate(30deg);
-  }
-  .settings-btn svg {
-    width: 13px;
-    height: 13px;
-  }
-  .settings-btn { text-decoration: none; }
 </style>
 </head>
 <body>
@@ -162,7 +131,7 @@
     <div class="nav-menu">
       <a href="dashboard.html" class="nav-link active">Início</a>
       <a href="notas.html" class="nav-link">Notas</a>
-      <a href="#" class="nav-link">Quiz</a>
+      <a href="quiz.html" class="nav-link">Quiz</a>
     </div>
   </div>
   <div class="nav-right">
@@ -183,20 +152,13 @@
       <h2 class="option-title">Bloco de Notas</h2>
       <p class="option-desc">Organize suas anotações clínicas, diagnósticos e condutas de forma segura.</p>
     </a>
-    <a href="#" class="option-card">
+    <a href="quiz.html" class="option-card">
       <div class="option-icon">🧠</div>
       <h2 class="option-title">Realizar Quiz</h2>
       <p class="option-desc">Teste seus conhecimentos com questões baseadas em casos clínicos e diretrizes.</p>
     </a>
   </div>
 </main>
-
-<a class="settings-btn" id="settingsBtn" title="Configurações" href="admin.html">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="12" cy="12" r="3"></circle>
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-  </svg>
-</a>
 
 <script>
   const firebaseConfig = {
@@ -227,9 +189,6 @@
       window.location.href = 'login.html';
       return;
     }
-
-    // Incrementa contador de acessos
-    rtdb.ref('stats/visits').transaction(current => (current || 0) + 1);
 
     const user = JSON.parse(sessionData);
     const key = emailToKey(user.email);
