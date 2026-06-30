@@ -228,6 +228,84 @@
   .option-btn:hover { border-color: var(--primary); background: #f5f8ff; }
   .option-btn.correct { background: #dcfce7; border-color: #22c55e; color: #166534; font-weight: 700; }
   .option-btn.wrong { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
+
+  /* ── BARRA DE PROGRESSO (durante o quiz) ── */
+  .quiz-progress-wrap { margin-bottom: 20px; }
+  .quiz-progress-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 700; color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .quiz-progress-meta strong { color: var(--primary); }
+  .quiz-progress-track {
+    width: 100%; height: 8px; background: #e2e5ea; border-radius: 999px; overflow: hidden;
+  }
+  .quiz-progress-fill {
+    height: 100%; background: var(--gradient); border-radius: 999px;
+    transition: width .3s ease;
+  }
+
+  /* ── BOTÃO PRÓXIMA QUESTÃO ── */
+  .btn-next {
+    display: none;
+    width: 100%; padding: 15px; margin-top: 18px;
+    background: var(--gradient); color: #fff; border: none;
+    border-radius: 999px; font-size: 15px; font-weight: 800; cursor: pointer;
+    box-shadow: 0 10px 24px -8px rgba(37,99,235,0.55);
+    transition: all .2s;
+  }
+  .btn-next:hover { transform: translateY(-1px); }
+
+  /* ── TELA DE RESULTADO ── */
+  .result-card {
+    background: #fff; border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 36px 28px; text-align: center;
+    box-shadow: 0 4px 14px -8px rgba(15,23,42,0.08);
+  }
+  .result-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+  .result-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; }
+
+  .progress-ring {
+    width: 180px; height: 180px; border-radius: 50%;
+    margin: 0 auto 20px; position: relative;
+  }
+  .progress-ring-fill { position: absolute; inset: 0; border-radius: 50%; }
+  .progress-ring-hole {
+    position: absolute; inset: 16px; background: #fff; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .progress-pct { font-size: 34px; font-weight: 800; line-height: 1; }
+  .progress-label { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: .8px; margin-top: 6px; }
+
+  .result-score-row {
+    display: flex; justify-content: center; gap: 28px; margin-bottom: 28px;
+  }
+  .result-stat { text-align: center; }
+  .result-stat-num { font-size: 22px; font-weight: 800; }
+  .result-stat-label { font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+
+  .btn-retry {
+    padding: 14px 28px; background: #fff; color: var(--primary);
+    border: 1.5px solid var(--primary); border-radius: 999px;
+    font-size: 14px; font-weight: 800; cursor: pointer; transition: all .15s;
+  }
+  .btn-retry:hover { background: #eef3ff; }
+
+  /* ── REVISÃO DE ACERTOS E ERROS ── */
+  .review-section { margin-top: 28px; text-align: left; }
+  .review-title { font-size: 14px; font-weight: 800; margin-bottom: 14px; }
+  .review-item {
+    border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px;
+    margin-bottom: 10px; display: flex; gap: 12px; align-items: flex-start;
+  }
+  .review-item.is-correct { border-left: 4px solid #22c55e; }
+  .review-item.is-wrong { border-left: 4px solid #ef4444; }
+  .review-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .review-body { flex: 1; }
+  .review-q { font-size: 13px; font-weight: 700; margin-bottom: 6px; line-height: 1.5; }
+  .review-answer { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+  .review-answer .right-ans { color: #166534; font-weight: 700; }
+  .review-answer .wrong-ans { color: #991b1b; font-weight: 700; text-decoration: line-through; }
 </style>
 </head>
 <body>
@@ -403,16 +481,24 @@
 
   function buildPrompt(difficulty, amount, text) {
     const difficultyInstruction = difficulty === 'medio'
-      ? 'MÉDIO: perguntas conceituais, definições e relações entre conceitos do material, exigindo compreensão clara do conteúdo.'
+      ? 'MÉDIO: perguntas conceituais, definições e relações entre conceitos do material, exigindo compreensão clara do conteúdo (não apenas memorização literal de frases do texto).'
       : 'DIFÍCIL: cada questão deve apresentar um CASO CLÍNICO COMPLEXO criado por você com base no conteúdo do material (história do paciente, sintomas, exames, etc.), exigindo raciocínio clínico avançado e diagnóstico diferencial, em nível de concurso/residência médica.';
 
-    return `Você é um Professor Universitário de Medicina, experiente e didático, especializado em elaborar avaliações para estudantes de medicina.
+    return `Você é um Professor Universitário de Medicina, experiente e didático, especializado em elaborar avaliações desafiadoras para estudantes de medicina.
 
 Leia com atenção todo o texto extraído do material de estudo abaixo e crie um quiz de múltipla escolha em português com exatamente ${amount} questões.
 
 Nível de dificuldade exigido: ${difficultyInstruction}
 
-Cada questão deve ter exatamente 4 alternativas, sendo apenas uma correta. Para questões de nível DÍFICIL, inclua o caso clínico dentro do próprio campo "question" (texto do caso seguido da pergunta), mas mantenha o caso clínico OBJETIVO e CURTO (no máximo 4-5 frases), para garantir que o JSON final fique bem formado.
+REGRAS PARA TORNAR O QUIZ REALMENTE DESAFIADOR (muito importantes):
+- O objetivo é testar o estudante de verdade, não dar respostas óbvias. Evite questões em que a alternativa correta seja claramente mais longa, mais detalhada ou óbvia em relação às demais.
+- Cada questão deve ter exatamente 4 alternativas, sendo apenas UMA correta.
+- As 3 alternativas erradas (distratores) devem ser PLAUSÍVEIS e tecnicamente relacionadas ao tema — erros comuns que um estudante real cometeria, conceitos parecidos mas distintos, ou armadilhas conceituais. Evite distratores absurdos ou fáceis de eliminar por exclusão óbvia.
+- Não repita a mesma estrutura de frase em todas as alternativas de forma que a correta se destaque pelo tamanho ou estilo.
+- Varie o assunto específico abordado entre as questões (não fique repetindo o mesmo sub-tópico).
+- Para questões de nível DÍFICIL, inclua o caso clínico dentro do próprio campo "question" (texto do caso seguido da pergunta), mas mantenha o caso clínico OBJETIVO e CURTO (no máximo 4-5 frases), para garantir que o JSON final fique bem formado.
+- No campo "explanation", explique por que a alternativa correta está certa E por que as principais alternativas erradas estão erradas — isso é essencial para o estudante aprender com seus erros.
+- A posição da resposta correta dentro do array "options" deve ser distribuída de forma aleatória e variada entre as questões (não deixe a correta sempre no início).
 
 Responda SOMENTE com um JSON válido, sem texto antes ou depois, sem markdown, sem comentários, no formato exato abaixo (não adicione nenhuma chave além destas):
 
@@ -478,6 +564,21 @@ ${text}
     }
 
     return null;
+  }
+
+  // Embaralha a ordem das alternativas de uma questão (e ajusta o índice correto),
+  // garantindo que a resposta certa não fique sempre nas mesmas posições (A/B).
+  function shuffleOptions(q) {
+    const order = q.options.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    return {
+      ...q,
+      options: order.map(i => q.options[i]),
+      correctIndex: order.indexOf(q.correctIndex)
+    };
   }
 
   async function callGroq(prompt) {
@@ -564,7 +665,8 @@ ${text}
       }
       statusArea.style.display = 'none';
       document.getElementById('setupCard').style.display = 'none';
-      renderQuiz(questions);
+      const shuffled = questions.map(shuffleOptions);
+      renderQuiz(shuffled);
     } catch (err) {
       console.error(err);
       statusArea.style.display = 'none';
@@ -573,46 +675,168 @@ ${text}
     }
   });
 
+  // ── ESTADO DO QUIZ EM ANDAMENTO ──
+  let quizState = null; // { questions, current, answers: [{selectedIndex, correct}] }
+
   function renderQuiz(questions) {
+    quizState = { questions, current: 0, answers: [] };
     const display = document.getElementById('quizDisplay');
     display.style.display = 'block';
-    display.innerHTML = '<h2 style="margin-bottom:24px; text-align:center;">Seu Quiz Personalizado</h2>';
-    
-    questions.forEach((q, i) => {
-      const card = document.createElement('div');
-      card.className = 'question-card';
-      card.innerHTML = `
-        <div class="q-num">Questão ${i+1} de ${questions.length}</div>
-        <div class="q-text">${q.question}</div>
-        <div class="options-list">
-          ${q.options.map((opt, idx) => `<button class="option-btn" onclick="checkAnswer(this, ${idx}, ${q.correctIndex})">${opt}</button>`).join('')}
-        </div>
-        <div class="explanation-box" id="exp-${i}" style="display:none; margin-top:14px; padding:12px 16px; background:#f0fdf4; border-left:4px solid #22c55e; border-radius:8px; font-size:13px; line-height:1.6; color:#166534;">
-          ${q.explanation ? '💡 ' + q.explanation : ''}
-        </div>
-      `;
-      display.appendChild(card);
-    });
+    renderQuestion();
   }
 
-  window.checkAnswer = (btn, selected, correct) => {
-    const parent = btn.parentElement;
-    const btns = parent.querySelectorAll('.option-btn');
+  function renderQuestion() {
+    const { questions, current } = quizState;
+    const q = questions[current];
+    const total = questions.length;
+    const pct = Math.round((current / total) * 100);
+
+    const display = document.getElementById('quizDisplay');
+    display.innerHTML = `
+      <div class="quiz-progress-wrap">
+        <div class="quiz-progress-meta">
+          <span>Questão <strong>${current + 1}</strong> de ${total}</span>
+          <span>${pct}% concluído</span>
+        </div>
+        <div class="quiz-progress-track">
+          <div class="quiz-progress-fill" style="width:${pct}%"></div>
+        </div>
+      </div>
+      <div class="question-card">
+        <div class="q-num">Questão ${current + 1} de ${total}</div>
+        <div class="q-text">${q.question}</div>
+        <div class="options-list" id="optionsList">
+          ${q.options.map((opt, idx) => `<button class="option-btn" data-idx="${idx}">${opt}</button>`).join('')}
+        </div>
+        <div class="explanation-box" id="expBox" style="display:none; margin-top:14px; padding:12px 16px; background:#f0fdf4; border-left:4px solid #22c55e; border-radius:8px; font-size:13px; line-height:1.6; color:#166534;">
+          ${q.explanation ? '💡 ' + q.explanation : ''}
+        </div>
+        <button class="btn-next" id="btnNext">${current + 1 === total ? 'Ver resultado' : 'Próxima questão →'}</button>
+      </div>
+    `;
+
+    const optionsList = document.getElementById('optionsList');
+    optionsList.querySelectorAll('.option-btn').forEach((btn) => {
+      btn.addEventListener('click', () => selectAnswer(parseInt(btn.dataset.idx, 10)));
+    });
+
+    document.getElementById('btnNext').addEventListener('click', nextQuestion);
+  }
+
+  function selectAnswer(selectedIdx) {
+    const { questions, current, answers } = quizState;
+    const q = questions[current];
+    const correct = selectedIdx === q.correctIndex;
+
+    answers[current] = { selectedIndex: selectedIdx, correct };
+
+    const optionsList = document.getElementById('optionsList');
+    const btns = optionsList.querySelectorAll('.option-btn');
     btns.forEach(b => b.style.pointerEvents = 'none');
-    
-    if (selected === correct) {
-      btn.classList.add('correct');
+
+    if (correct) {
+      btns[selectedIdx].classList.add('correct');
     } else {
-      btn.classList.add('wrong');
-      btns[correct].classList.add('correct');
+      btns[selectedIdx].classList.add('wrong');
+      btns[q.correctIndex].classList.add('correct');
     }
 
-    const card = parent.parentElement;
-    const expBox = card.querySelector('.explanation-box');
+    const expBox = document.getElementById('expBox');
     if (expBox && expBox.textContent.trim()) {
       expBox.style.display = 'block';
     }
-  };
+
+    document.getElementById('btnNext').style.display = 'block';
+  }
+
+  function nextQuestion() {
+    const { questions, current, answers } = quizState;
+    if (!answers[current]) return; // garante que a pessoa respondeu antes de avançar
+
+    if (current + 1 < questions.length) {
+      quizState.current += 1;
+      renderQuestion();
+    } else {
+      renderResults();
+    }
+  }
+
+  function renderResults() {
+    const { questions, answers } = quizState;
+    const total = questions.length;
+    const correctCount = answers.filter(a => a && a.correct).length;
+    const pct = Math.round((correctCount / total) * 100);
+
+    let color = '#2563eb';
+    let mensagem = 'Bom trabalho, continue praticando!';
+    if (pct >= 70) { color = '#22c55e'; mensagem = 'Excelente desempenho! 🎉'; }
+    else if (pct < 40) { color = '#ef4444'; mensagem = 'Revise o material e tente novamente.'; }
+
+    const reviewHtml = questions.map((q, i) => {
+      const ans = answers[i];
+      const isCorrect = ans && ans.correct;
+      return `
+        <div class="review-item ${isCorrect ? 'is-correct' : 'is-wrong'}">
+          <span class="review-icon">${isCorrect ? '✅' : '❌'}</span>
+          <div class="review-body">
+            <div class="review-q">Q${i + 1}. ${q.question}</div>
+            <div class="review-answer">
+              ${isCorrect
+                ? `<span class="right-ans">Você acertou:</span> ${q.options[q.correctIndex]}`
+                : `<span class="wrong-ans">Sua resposta:</span> ${ans ? q.options[ans.selectedIndex] : '(não respondida)'}<br><span class="right-ans">Correta:</span> ${q.options[q.correctIndex]}`
+              }
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const display = document.getElementById('quizDisplay');
+    display.innerHTML = `
+      <div class="result-card">
+        <div class="result-title">Resultado do Quiz</div>
+        <div class="result-subtitle">${mensagem}</div>
+
+        <div class="progress-ring">
+          <div class="progress-ring-fill" style="background: conic-gradient(${color} ${pct}%, #e2e5ea ${pct}% 100%);"></div>
+          <div class="progress-ring-hole">
+            <span class="progress-pct" style="color:${color}">${pct}%</span>
+            <span class="progress-label">de acerto</span>
+          </div>
+        </div>
+
+        <div class="result-score-row">
+          <div class="result-stat">
+            <div class="result-stat-num" style="color:#22c55e">${correctCount}</div>
+            <div class="result-stat-label">Acertos</div>
+          </div>
+          <div class="result-stat">
+            <div class="result-stat-num" style="color:#ef4444">${total - correctCount}</div>
+            <div class="result-stat-label">Erros</div>
+          </div>
+          <div class="result-stat">
+            <div class="result-stat-num">${total}</div>
+            <div class="result-stat-label">Total</div>
+          </div>
+        </div>
+
+        <button class="btn-retry" id="btnRetry">Gerar novo quiz</button>
+
+        <div class="review-section">
+          <div class="review-title">📋 Revisão — estude em cima dos seus erros</div>
+          ${reviewHtml}
+        </div>
+      </div>
+    `;
+
+    document.getElementById('btnRetry').addEventListener('click', () => {
+      quizState = null;
+      display.style.display = 'none';
+      display.innerHTML = '';
+      document.getElementById('setupCard').style.display = 'block';
+      generateBtn.disabled = false;
+    });
+  }
 
   // Nome do usuário
   (function() {
