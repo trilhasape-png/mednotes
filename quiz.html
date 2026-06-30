@@ -110,6 +110,7 @@
     gap: 16px;
     margin-bottom: 24px;
   }
+  .setup-grid-single { grid-template-columns: 1fr; }
   .config-item label {
     display: block; font-size: 11px; font-weight: 800;
     color: var(--text-muted); text-transform: uppercase;
@@ -335,7 +336,7 @@
     <div class="card-title">Gerador de Quiz</div>
     <div class="card-subtitle">Configure as opções e envie o PDF para começar.</div>
 
-    <div class="setup-grid">
+    <div class="setup-grid setup-grid-single">
       <div class="config-item">
         <label>Nível de Dificuldade</label>
         <div class="custom-select" id="difficultyCustom">
@@ -351,23 +352,6 @@
         <select class="select-box" id="difficulty" style="display:none">
           <option value="medio">Médio (Conceitual)</option>
           <option value="dificil">Difícil (Casos Clínicos / Concursos)</option>
-        </select>
-      </div>
-      <div class="config-item">
-        <label>Quantidade de Questões</label>
-        <div class="custom-select" id="qAmountCustom">
-          <button type="button" class="select-trigger">
-            <span class="select-trigger-text">10 Questões</span>
-            <svg class="select-chevron" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 7.5 10 12.5 15 7.5"/></svg>
-          </button>
-          <ul class="select-options">
-            <li data-value="10" class="selected">10 Questões</li>
-            <li data-value="20">20 Questões</li>
-          </ul>
-        </div>
-        <select class="select-box" id="qAmount" style="display:none">
-          <option value="10">10 Questões</option>
-          <option value="20">20 Questões</option>
         </select>
       </div>
     </div>
@@ -482,23 +466,43 @@
   function buildPrompt(difficulty, amount, text) {
     const difficultyInstruction = difficulty === 'medio'
       ? 'MÉDIO: perguntas conceituais, definições e relações entre conceitos do material, exigindo compreensão clara do conteúdo (não apenas memorização literal de frases do texto).'
-      : 'DIFÍCIL: cada questão deve apresentar um CASO CLÍNICO COMPLEXO criado por você com base no conteúdo do material (história do paciente, sintomas, exames, etc.), exigindo raciocínio clínico avançado e diagnóstico diferencial, em nível de concurso/residência médica.';
+      : 'DÍFICIL: cada questão deve ser um CASO CLÍNICO COMPLETO E REALISTA, no padrão de provas de residência médica (estilo USMLE/Revalida/concursos), e não um resumo simplificado.';
 
-    return `Você é um Professor Universitário de Medicina, experiente e didático, especializado em elaborar avaliações desafiadoras para estudantes de medicina.
+    const casoClinicoTemplate = difficulty === 'dificil' ? `
+ESTRUTURA OBRIGATÓRIA DO CASO CLÍNICO (campo "question"):
+Cada caso deve conter, nesta ordem, dados robustos e específicos (não genéricos):
+1. Identificação: idade e sexo do paciente.
+2. Queixa principal e tempo de evolução (ex: "há 3 dias", "há 2 semanas").
+3. História da doença atual (HDA): evolução cronológica dos sintomas, fatores de melhora/piora, sintomas associados.
+4. Antecedentes relevantes quando pertinentes ao raciocínio: comorbidades, medicações em uso, tabagismo/etilismo, histórico familiar, alergias.
+5. Exame físico: sinais vitais COMPLETOS e coerentes com o quadro (PA, FC, FR, temperatura, SatO2) + achados relevantes do exame físico segmentar.
+6. Exames complementares quando relevantes para a resolução da questão: resultados laboratoriais ou de imagem com VALORES NUMÉRICOS REALISTAS (ex: "Hb 9,2 g/dL", "leucócitos 14.200/mm³", "creatinina 2,1 mg/dL"), coerentes com o diagnóstico.
+7. A pergunta final deve exigir raciocínio clínico de verdade: diagnóstico mais provável, diagnóstico diferencial, conduta inicial, próximo exame a solicitar, ou interpretação dos achados — NUNCA uma pergunta que possa ser respondida só por uma palavra-chave isolada do caso.
+
+COERÊNCIA CLÍNICA É OBRIGATÓRIA E TEM PRIORIDADE MÁXIMA:
+- Todos os dados do caso (sintomas, sinais vitais, exame físico, exames complementares) devem ser CONSISTENTES ENTRE SI e compatíveis com o diagnóstico da alternativa correta. Não é permitido nenhum dado contraditório, incompleto ou clinicamente implausível.
+- Antes de finalizar cada questão, verifique mentalmente: os sinais vitais batem com o quadro descrito? Os exames laboratoriais são compatíveis com a doença? A faixa etária e o perfil do paciente fazem sentido com o diagnóstico? Se algo não fizer sentido clínico, corrija antes de responder.
+- Não invente nomes de exames ou valores de referência incorretos. Use apenas terminologia e valores médicos reais e plausíveis.
+- O caso completo deve ter entre 7 e 12 frases, formando um parágrafo único, denso em informação clínica, dentro do campo "question" (pode usar \\n dentro da string para separar HDA / exame físico / exames, se ajudar a legibilidade, mas o JSON deve continuar válido).
+` : `
+- Mantenha a pergunta objetiva e direta ao ponto, sem floreios desnecessários.
+`;
+
+    return `Você é um Professor Universitário de Medicina, experiente e didático, especializado em elaborar avaliações desafiadoras para estudantes de medicina, no padrão de provas de residência médica.
 
 Leia com atenção todo o texto extraído do material de estudo abaixo e crie um quiz de múltipla escolha em português com exatamente ${amount} questões.
 
 Nível de dificuldade exigido: ${difficultyInstruction}
-
+${casoClinicoTemplate}
 REGRAS PARA TORNAR O QUIZ REALMENTE DESAFIADOR (muito importantes):
 - O objetivo é testar o estudante de verdade, não dar respostas óbvias. Evite questões em que a alternativa correta seja claramente mais longa, mais detalhada ou óbvia em relação às demais.
 - Cada questão deve ter exatamente 4 alternativas, sendo apenas UMA correta.
-- As 3 alternativas erradas (distratores) devem ser PLAUSÍVEIS e tecnicamente relacionadas ao tema — erros comuns que um estudante real cometeria, conceitos parecidos mas distintos, ou armadilhas conceituais. Evite distratores absurdos ou fáceis de eliminar por exclusão óbvia.
+- As 3 alternativas erradas (distratores) devem ser PLAUSÍVEIS e tecnicamente relacionadas ao tema — erros comuns que um estudante real cometeria, diagnósticos diferenciais próximos, condutas quase corretas mas com algum erro relevante. Evite distratores absurdos ou fáceis de eliminar por exclusão óbvia.
 - Não repita a mesma estrutura de frase em todas as alternativas de forma que a correta se destaque pelo tamanho ou estilo.
 - Varie o assunto específico abordado entre as questões (não fique repetindo o mesmo sub-tópico).
-- Para questões de nível DÍFICIL, inclua o caso clínico dentro do próprio campo "question" (texto do caso seguido da pergunta), mas mantenha o caso clínico OBJETIVO e CURTO (no máximo 4-5 frases), para garantir que o JSON final fique bem formado.
 - No campo "explanation", explique por que a alternativa correta está certa E por que as principais alternativas erradas estão erradas — isso é essencial para o estudante aprender com seus erros.
 - A posição da resposta correta dentro do array "options" deve ser distribuída de forma aleatória e variada entre as questões (não deixe a correta sempre no início).
+- PRECISÃO MÉDICA É OBRIGATÓRIA: não inclua nenhuma informação clinicamente incorreta, incompleta ou inconsistente. Se tiver qualquer dúvida sobre a exatidão de um dado, prefira omiti-lo a inventar algo errado.
 
 Responda SOMENTE com um JSON válido, sem texto antes ou depois, sem markdown, sem comentários, no formato exato abaixo (não adicione nenhuma chave além destas):
 
@@ -595,7 +599,7 @@ ${text}
           { role: 'user', content: prompt }
         ],
         temperature: 0.4,
-        max_tokens: 8000
+        max_tokens: 16000
       })
     });
 
@@ -627,9 +631,11 @@ ${text}
   }
 
   // ── GERAÇÃO REAL DO QUIZ COM GROQ (LLAMA) ──
+  const FIXED_QUESTION_AMOUNT = 10;
+
   generateBtn.addEventListener('click', async () => {
     const difficulty = document.getElementById('difficulty').value;
-    const amount = document.getElementById('qAmount').value;
+    const amount = FIXED_QUESTION_AMOUNT;
 
     generateBtn.disabled = true;
     statusArea.style.display = 'block';
