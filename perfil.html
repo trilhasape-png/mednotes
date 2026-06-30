@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedNotes — Meu Perfil</title>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --text: #1a1d23;
+    --text-muted: #6b7280;
+    --border: #e2e5ea;
+    --surface: #ffffff;
+    --radius: 12px;
+    --bg: #f5f6f8;
+  }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── NAVBAR FIXO ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 60px;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 32px;
+    justify-content: space-between;
+    z-index: 100;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  }
+  .nav-left { display: flex; align-items: center; gap: 24px; }
+  .nav-logo {
+    font-size: 14px; font-weight: 800; letter-spacing: 2px;
+    color: var(--primary); text-transform: uppercase;
+  }
+  .nav-menu { display: flex; gap: 20px; }
+  .nav-link {
+    text-decoration: none; font-size: 14px; font-weight: 600;
+    color: var(--text-muted); transition: color .15s;
+  }
+  .nav-link:hover, .nav-link.active { color: var(--primary); }
+
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+  .user-info { font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; }
+  .btn-logout {
+    padding: 6px 12px; border: 1px solid var(--border);
+    border-radius: 6px; font-size: 12px; font-weight: 600;
+    color: var(--text-muted); text-decoration: none; transition: all .15s;
+  }
+  .btn-logout:hover { color: #dc2626; border-color: #dc2626; }
+
+  /* ── CONTEÚDO ── */
+  main {
+    margin-top: 60px;
+    padding: 40px 24px;
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 32px;
+  }
+
+  /* ── COLUNA ESQUERDA (DADOS) ── */
+  .profile-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  }
+  .card-title {
+    font-size: 16px; font-weight: 700; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  
+  .avatar-section {
+    text-align: center; margin-bottom: 24px;
+  }
+  .avatar-circle {
+    width: 80px; height: 80px; background: var(--primary);
+    color: #fff; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center;
+    font-size: 32px; font-weight: 700; margin: 0 auto 12px;
+  }
+  .profile-name { font-size: 18px; font-weight: 700; }
+  .profile-email { font-size: 13px; color: var(--text-muted); }
+
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block; font-size: 12px; font-weight: 700;
+    color: var(--text-muted); text-transform: uppercase;
+    margin-bottom: 6px; letter-spacing: 0.5px;
+  }
+  .form-group input {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 14px; outline: none;
+    transition: border-color .15s;
+  }
+  .form-group input:focus { border-color: var(--primary); }
+  
+  .btn-save {
+    width: 100%; padding: 12px; background: var(--primary);
+    color: #fff; border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    transition: background .15s; margin-top: 8px;
+  }
+  .btn-save:hover { background: var(--primary-dark); }
+  .save-msg { font-size: 12px; text-align: center; margin-top: 8px; min-height: 18px; }
+
+  /* ── COLUNA DIREITA (PROGRESSO E NOTÍCIAS) ── */
+  .profile-main {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+  }
+  .stat-card {
+    background: #fff; padding: 20px; border-radius: var(--radius);
+    border: 1px solid var(--border); text-align: center;
+  }
+  .stat-val { font-size: 24px; font-weight: 800; color: var(--primary); }
+  .stat-label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+
+  .news-item {
+    padding: 16px; border-bottom: 1px solid var(--border);
+  }
+  .news-item:last-child { border-bottom: none; }
+  .news-date { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+  .news-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .news-body { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+  @media (max-width: 800px) {
+    main { grid-template-columns: 1fr; }
+    .nav-menu { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <div class="nav-logo">MedNotes</div>
+    <div class="nav-menu">
+      <a href="dashboard.html" class="nav-link">Início</a>
+      <a href="notas.html" class="nav-link">Notas</a>
+      <a href="#" class="nav-link">Quiz</a>
+    </div>
+  </div>
+  <div class="nav-right">
+    <span class="user-info" id="userNameNav">Carregando...</span>
+    <a href="#" class="btn-logout" onclick="logout()">Sair</a>
+  </div>
+</nav>
+
+<main>
+  <!-- DADOS PESSOAIS -->
+  <aside class="profile-sidebar">
+    <div class="card">
+      <div class="avatar-section">
+        <div class="avatar-circle" id="avatarInitial">?</div>
+        <div class="profile-name" id="profileNameDisplay">...</div>
+        <div class="profile-email" id="profileEmailDisplay">...</div>
+      </div>
+      
+      <div class="card-title">👤 Dados Adicionais</div>
+      <form id="profileForm">
+        <div class="form-group">
+          <label>WhatsApp</label>
+          <input type="text" id="p-whatsapp" placeholder="(00) 00000-0000">
+        </div>
+        <div class="form-group">
+          <label>Instagram</label>
+          <input type="text" id="p-instagram" placeholder="@seuusuario">
+        </div>
+        <div class="form-group">
+          <label>E-mail de Contato</label>
+          <input type="email" id="p-contact-email" placeholder="contato@exemplo.com">
+        </div>
+        <button type="submit" class="btn-save">Salvar Alterações</button>
+        <div class="save-msg" id="saveMsg"></div>
+      </form>
+    </div>
+  </aside>
+
+  <!-- PROGRESSO E NOTÍCIAS -->
+  <section class="profile-main">
+    <!-- PROGRESSO -->
+    <div class="card">
+      <div class="card-title">📊 Progresso em Quizzes</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-val">0</div>
+          <div class="stat-label">Realizados</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val">0%</div>
+          <div class="stat-label">Acerto Médio</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val">0</div>
+          <div class="stat-label">Ranking</div>
+        </div>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-top: 16px; text-align: center;">
+        Complete seu primeiro quiz para ver as estatísticas aqui!
+      </p>
+    </div>
+
+    <!-- NOTÍCIAS DO ADMINISTRADOR -->
+    <div class="card">
+      <div class="card-title">📢 Mural do Administrador</div>
+      <div class="news-list">
+        <div class="news-item">
+          <div class="news-date">29 de Junho, 2026</div>
+          <div class="news-title">Bem-vindo à nova área de perfil!</div>
+          <div class="news-body">Agora você pode personalizar seus dados e em breve acompanhar seu desempenho acadêmico detalhadamente.</div>
+        </div>
+        <div class="news-item">
+          <div class="news-date">26 de Junho, 2026</div>
+          <div class="news-title">Manutenção programada</div>
+          <div class="news-body">Realizaremos uma atualização no sistema de quizzes neste domingo às 22h. A plataforma poderá ficar instável por alguns minutos.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCBziafGOowx77z5GmQAf4y8XDBHoXinHU",
+    authDomain: "mednotesigor.firebaseapp.com",
+    databaseURL: "https://mednotesigor-default-rtdb.firebaseio.com",
+    projectId: "mednotesigor",
+    storageBucket: "mednotesigor.firebasestorage.app",
+    messagingSenderId: "97894871659",
+    appId: "1:97894871659:web:539868aefc0a42392f772e"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const rtdb = firebase.database();
+
+  function emailToKey(email) {
+    return email.replace(/\./g, '_dot_').replace(/@/g, '_at_');
+  }
+
+  function logout() {
+    localStorage.removeItem('mednotes_session');
+    window.location.href = 'index.html';
+  }
+
+  let userKey = "";
+
+  // Carregar dados
+  (async function() {
+    const sessionData = localStorage.getItem('mednotes_session');
+    if (!sessionData) {
+      window.location.href = 'login.html';
+      return;
+    }
+
+    const user = JSON.parse(sessionData);
+    userKey = emailToKey(user.email);
+
+    // Exibição básica
+    document.getElementById('userNameNav').textContent = user.name;
+    document.getElementById('profileNameDisplay').textContent = user.name;
+    document.getElementById('profileEmailDisplay').textContent = user.email;
+    document.getElementById('avatarInitial').textContent = user.name.charAt(0).toUpperCase();
+
+    try {
+      const snap = await rtdb.ref('users/' + userKey).once('value');
+      if (snap.exists()) {
+        const data = snap.val();
+        if (data.whatsapp) document.getElementById('p-whatsapp').value = data.whatsapp;
+        if (data.instagram) document.getElementById('p-instagram').value = data.instagram;
+        if (data.contactEmail) document.getElementById('p-contact-email').value = data.contactEmail;
+      }
+    } catch(e) { console.error(e); }
+  })();
+
+  // Salvar dados
+  document.getElementById('profileForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const msg = document.getElementById('saveMsg');
+    msg.textContent = 'Salvando...';
+    msg.style.color = 'var(--text-muted)';
+
+    const whatsapp = document.getElementById('p-whatsapp').value;
+    const instagram = document.getElementById('p-instagram').value;
+    const contactEmail = document.getElementById('p-contact-email').value;
+
+    try {
+      await rtdb.ref('users/' + userKey).update({
+        whatsapp, instagram, contactEmail
+      });
+      msg.textContent = '✅ Alterações salvas com sucesso!';
+      msg.style.color = '#16a34a';
+      setTimeout(() => msg.textContent = '', 3000);
+    } catch(e) {
+      msg.textContent = '❌ Erro ao salvar. Tente novamente.';
+      msg.style.color = '#dc2626';
+    }
+  });
+</script>
+
+</body>
+</html>
