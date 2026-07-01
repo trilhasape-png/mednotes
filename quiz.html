@@ -460,7 +460,9 @@
   // ⚠️ Chave pública — uso compartilhado por todos os usuários do site.
   // Pegue a sua de graça em: https://console.groq.com/keys
   const GROQ_API_KEY = "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";
-  const MODEL = "llama-3.3-70b-versatile";
+  // Llama 4 Scout tem limite de tokens por minuto (TPM) bem maior que o Llama 3.3 70B
+  // no tier gratuito do Groq, o que evita o erro 413 "Request too large" em PDFs maiores.
+  const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
   const GENERATE_URL = "https://api.groq.com/openai/v1/chat/completions";
 
   function buildPrompt(difficulty, amount, text) {
@@ -599,7 +601,7 @@ ${text}
           { role: 'user', content: prompt }
         ],
         temperature: 0.4,
-        max_tokens: 16000
+        max_tokens: 6000
       })
     });
 
@@ -641,10 +643,12 @@ ${text}
     statusArea.style.display = 'block';
     statusMsg.textContent = "Professor Universitário analisando o material...";
 
-    // O modelo llama-3.3-70b-versatile suporta até ~128k tokens de contexto,
-    // então limitamos o texto extraído para caber com folga junto do prompt e da resposta.
-    const MAX_CHARS = 150000;
-    const textToProcess = extractedText.length > MAX_CHARS
+    // O Llama 4 Scout tem limite de 30.000 tokens por minuto (TPM) no tier gratuito do Groq.
+    // Reservamos espaço para o prompt de instruções (~800 tokens) e para a resposta (6.000 tokens),
+    // deixando o restante para o texto do PDF, com margem de segurança.
+    const MAX_CHARS = 60000;
+    const wasTruncated = extractedText.length > MAX_CHARS;
+    const textToProcess = wasTruncated
       ? extractedText.substring(0, MAX_CHARS)
       : extractedText;
 
@@ -653,6 +657,10 @@ ${text}
       generateBtn.disabled = false;
       alert('Não foi possível extrair texto deste PDF. Verifique se ele não é uma imagem escaneada.');
       return;
+    }
+
+    if (wasTruncated) {
+      statusMsg.textContent = "PDF extenso — usando as primeiras páginas do material...";
     }
 
     const prompt = buildPrompt(difficulty, amount, textToProcess);
