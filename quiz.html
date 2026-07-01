@@ -532,7 +532,7 @@
   const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
   const GENERATE_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-  function buildPrompt(difficulty, amount, text) {
+  function buildPrompt(difficulty, amount, text, chunkInfo) {
     const difficultyInstruction = difficulty === 'medio'
       ? 'MÉDIO: perguntas conceituais, definições e relações entre conceitos do material, exigindo compreensão clara do conteúdo (não apenas memorização literal de frases do texto).'
       : 'DÍFICIL: cada questão deve ser um CASO CLÍNICO COMPLETO E REALISTA, no padrão de provas de residência médica (estilo USMLE/Revalida/concursos), e não um resumo simplificado.';
@@ -557,17 +557,30 @@ COERÊNCIA CLÍNICA É OBRIGATÓRIA E TEM PRIORIDADE MÁXIMA:
 - Mantenha a pergunta objetiva e direta ao ponto, sem floreios desnecessários.
 `;
 
-    return `Você é um Professor Universitário de Medicina, experiente e didático, especializado em elaborar avaliações desafiadoras para estudantes de medicina, no padrão de provas de residência médica.
+    const isChunked = chunkInfo && chunkInfo.total > 1;
+    const chunkHeader = isChunked
+      ? `\nATENÇÃO: o texto abaixo é o TRECHO ${chunkInfo.index + 1} de ${chunkInfo.total} do material de estudo completo (o material foi dividido em ${chunkInfo.total} partes sequenciais para garantir cobertura total do conteúdo). Você deve criar as questões usando SOMENTE o conteúdo deste trecho específico.\n`
+      : '';
 
+    const topicDistribution = isChunked
+      ? `DISTRIBUIÇÃO OBRIGATÓRIA DE TÓPICOS DENTRO DESTE TRECHO:
+- Antes de criar as questões, identifique mentalmente TODOS os temas, subtemas e conceitos presentes NESTE TRECHO (não no material inteiro, apenas nesta parte).
+- Distribua as ${amount} questões de forma proporcional entre os diferentes temas encontrados neste trecho — não concentre todas as questões em um único parágrafo ou conceito isolado.
+- Se este trecho abordar apenas um tema central, tudo bem gerar todas as questões sobre ele, mas explore ângulos, aspectos e detalhes diferentes desse tema em cada questão (evite duas questões perguntando essencialmente a mesma coisa).
+- Proibido criar duas ou mais questões que testem exatamente o mesmo fato/conceito com palavras diferentes.`
+      : `DISTRIBUIÇÃO OBRIGATÓRIA DE TÓPICOS:
+- Antes de criar as questões, identifique mentalmente TODOS os tópicos, capítulos e seções presentes no texto fornecido.
+- Distribua as ${amount} questões de forma proporcional entre esses tópicos — cada tópico deve ser coberto com pelo menos uma questão. Proibido criar mais de 2 questões sobre o mesmo sub-tópico específico.
+- O objetivo é que o estudante seja avaliado de forma abrangente sobre TODO o conteúdo do material, não apenas sobre o tema que aparece primeiro.
+- Se o material tiver 5 tópicos distintos e forem 10 questões, distribua ~2 por tópico. Se tiver 3 tópicos e 10 questões, distribua ~3-4 por tópico.`;
+
+    return `Você é um Professor Universitário de Medicina, experiente e didático, especializado em elaborar avaliações desafiadoras para estudantes de medicina, no padrão de provas de residência médica.
+${chunkHeader}
 Leia com atenção todo o texto extraído do material de estudo abaixo e crie um quiz de múltipla escolha em português com exatamente ${amount} questões.
 
 Nível de dificuldade exigido: ${difficultyInstruction}
 ${casoClinicoTemplate}
-DISTRIBUIÇÃO OBRIGATÓRIA DE TÓPICOS:
-- Antes de criar as questões, identifique mentalmente TODOS os tópicos, capítulos e seções presentes no texto fornecido.
-- Distribua as ${amount} questões de forma proporcional entre esses tópicos — cada tópico deve ser coberto com pelo menos uma questão. Proibido criar mais de 2 questões sobre o mesmo sub-tópico específico.
-- O objetivo é que o estudante seja avaliado de forma abrangente sobre TODO o conteúdo do material, não apenas sobre o tema que aparece primeiro.
-- Se o material tiver 5 tópicos distintos e forem 10 questões, distribua ~2 por tópico. Se tiver 3 tópicos e 10 questões, distribua ~3-4 por tópico.
+${topicDistribution}
 
 REGRAS PARA TORNAR O QUIZ REALMENTE DESAFIADOR (muito importantes):
 - O objetivo é testar o estudante de verdade, não dar respostas óbvias. Evite questões em que a alternativa correta seja claramente mais longa, mais detalhada ou óbvia em relação às demais.
@@ -660,18 +673,16 @@ ${text}
     };
   }
 
-  // Amostragem distribuída do texto do PDF.
-  // Divide o texto em `slices` fatias iguais e coleta trechos centrais de cada uma,
-  // garantindo que a IA veja conteúdo do início, meio e fim do documento,
-  // sem se concentrar apenas nos primeiros tópicos.
-  function sampleDistributed(text, maxChars, slices = 12) {
+  // Amostragem distribuída "de segurança": usada apenas DENTRO de um bloco individual,
+  // caso esse bloco ainda seja grande demais para a IA processar de uma vez.
+  // Divide o trecho em `slices` fatias iguais e coleta trechos centrais de cada uma.
+  function sampleDistributed(text, maxChars, slices = 6) {
     if (text.length <= maxChars) return text;
     const chunkSize = Math.floor(maxChars / slices);
     const sliceLen = Math.floor(text.length / slices);
     let result = '';
     for (let i = 0; i < slices; i++) {
       const sliceStart = i * sliceLen;
-      // Pega do centro de cada fatia para evitar cortar no meio de uma frase de forma extrema
       const center = sliceStart + Math.floor(sliceLen / 2);
       const start = Math.max(0, center - Math.floor(chunkSize / 2));
       const end = Math.min(text.length, start + chunkSize);
@@ -679,6 +690,62 @@ ${text}
       result += text.slice(start, end);
     }
     return result;
+  }
+
+  // Divide o texto COMPLETO do PDF em `numChunks` blocos CONTÍGUOS (sem pular partes),
+  // tentando quebrar em fronteiras de parágrafo/frase para não cortar conteúdo no meio.
+  // Isso garante que cada bloco cubra uma porção real e legível do documento
+  // (início, meio, fim, etc.), em vez de fatias minúsculas e desconexas.
+  function splitIntoChunks(text, numChunks) {
+    const trimmed = text.trim();
+    if (numChunks <= 1 || trimmed.length === 0) return [trimmed];
+
+    const chunks = [];
+    const approxSize = Math.ceil(trimmed.length / numChunks);
+    let start = 0;
+
+    for (let i = 0; i < numChunks; i++) {
+      if (i === numChunks - 1) {
+        chunks.push(trimmed.slice(start).trim());
+        break;
+      }
+      const target = start + approxSize;
+      const windowSize = Math.max(200, Math.floor(approxSize * 0.15));
+      const windowStart = Math.max(start, target - windowSize);
+      const windowEnd = Math.min(trimmed.length, target + windowSize);
+      const windowText = trimmed.slice(windowStart, windowEnd);
+
+      let breakPos = windowText.lastIndexOf('\n\n');
+      if (breakPos === -1) breakPos = windowText.lastIndexOf('. ');
+      if (breakPos === -1) breakPos = windowText.lastIndexOf(' ');
+
+      const end = breakPos !== -1 ? windowStart + breakPos + 1 : target;
+      chunks.push(trimmed.slice(start, end).trim());
+      start = end;
+    }
+
+    return chunks.filter(c => c.length > 0);
+  }
+
+  // Decide quantos blocos usar com base no tamanho do texto extraído.
+  // Documentos curtos não precisam (nem devem) ser fatiados.
+  function decideChunkCount(textLength) {
+    const MIN_CHARS_PER_CHUNK = 3500;
+    const MAX_CHUNKS = 6;
+    if (textLength <= MIN_CHARS_PER_CHUNK * 1.5) return 1;
+    return Math.min(MAX_CHUNKS, Math.max(2, Math.floor(textLength / MIN_CHARS_PER_CHUNK)));
+  }
+
+  // Distribui `amount` questões entre `numChunks` blocos o mais igualmente possível,
+  // sem deixar nenhum bloco com 0 questões e sem passar do total.
+  function distributeAmount(amount, numChunks) {
+    const base = Math.floor(amount / numChunks);
+    let remainder = amount - base * numChunks;
+    const result = new Array(numChunks).fill(base);
+    for (let i = 0; i < numChunks && remainder > 0; i++, remainder--) {
+      result[i] += 1;
+    }
+    return result.filter(n => n > 0);
   }
 
   async function callGroq(prompt) {
@@ -729,6 +796,22 @@ ${text}
   // ── GERAÇÃO REAL DO QUIZ COM GROQ (LLAMA) ──
   const FIXED_QUESTION_AMOUNT = 10;
 
+  // Elemento opcional para mostrar progresso "bloco X de Y" durante a geração.
+  function setGenerateProgress(msg) {
+    const stepGenerate = stepEls.generate;
+    if (!stepGenerate) return;
+    let progressEl = stepGenerate.querySelector('.step-progress-msg');
+    if (!progressEl) {
+      progressEl = document.createElement('div');
+      progressEl.className = 'step-progress-msg';
+      progressEl.style.cssText = 'font-size:12px;color:var(--text-muted);margin-top:2px;';
+      stepGenerate.appendChild(progressEl);
+    }
+    progressEl.textContent = msg;
+  }
+
+  const MAX_CHARS_PER_CHUNK = 12000; // limite de segurança por chamada de IA
+
   generateBtn.addEventListener('click', async () => {
     const difficulty = document.getElementById('difficulty').value;
     const amount = FIXED_QUESTION_AMOUNT;
@@ -739,35 +822,58 @@ ${text}
     setStepDone('extract');
     setStepActive('generate');
 
-    // Amostragem distribuída: em vez de pegar só o início do PDF,
-    // dividimos o texto total em N fatias e coletamos trechos de cada uma,
-    // garantindo cobertura proporcional de todo o documento.
-    const MAX_CHARS = 60000;
-    const textToProcess = sampleDistributed(extractedText, MAX_CHARS);
-
-    if (!textToProcess.trim()) {
+    if (!extractedText.trim()) {
       statusArea.style.display = 'none';
       generateBtn.disabled = false;
       alert('Não foi possível extrair texto deste PDF. Verifique se ele não é uma imagem escaneada.');
       return;
     }
 
-    const prompt = buildPrompt(difficulty, amount, textToProcess);
+    // Divide o PDF inteiro em blocos contíguos (cobrindo início, meio e fim)
+    // e gera uma parte das questões para CADA bloco, em chamadas separadas.
+    // Isso garante que temas do meio/fim do documento não sejam ignorados.
+    const numChunks = decideChunkCount(extractedText.length);
+    const textChunks = splitIntoChunks(extractedText, numChunks);
+    const questionCounts = distributeAmount(amount, textChunks.length);
 
+    const allQuestions = [];
     try {
-      let questions;
-      try {
-        questions = await callGroq(prompt);
-      } catch (firstErr) {
-        // Uma segunda tentativa automática costuma resolver falhas pontuais de formatação do JSON.
-        questions = await callGroq(prompt);
+      for (let i = 0; i < textChunks.length; i++) {
+        const chunkAmount = questionCounts[i];
+        if (!chunkAmount) continue;
+
+        setGenerateProgress(`Analisando parte ${i + 1} de ${textChunks.length} do material...`);
+
+        const chunkText = sampleDistributed(textChunks[i], MAX_CHARS_PER_CHUNK);
+        const prompt = buildPrompt(difficulty, chunkAmount, chunkText, { index: i, total: textChunks.length });
+
+        let chunkQuestions;
+        try {
+          chunkQuestions = await callGroq(prompt);
+        } catch (firstErr) {
+          // Uma segunda tentativa automática costuma resolver falhas pontuais de formatação do JSON.
+          chunkQuestions = await callGroq(prompt);
+        }
+        if (Array.isArray(chunkQuestions) && chunkQuestions.length > 0) {
+          allQuestions.push(...chunkQuestions);
+        }
       }
-      if (!Array.isArray(questions) || questions.length === 0) {
+
+      if (allQuestions.length === 0) {
         throw new Error('A IA não retornou perguntas válidas.');
       }
+
       setStepDone('generate');
       setStepActive('finalize');
-      const shuffled = questions.map(shuffleOptions);
+
+      // Embaralha a ordem das questões (para não ficarem agrupadas por bloco/tema)
+      // e embaralha as alternativas de cada uma individualmente.
+      for (let i = allQuestions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
+      }
+      const shuffled = allQuestions.map(shuffleOptions);
+
       setStepDone('finalize');
       statusArea.style.display = 'none';
       document.getElementById('setupCard').style.display = 'none';
