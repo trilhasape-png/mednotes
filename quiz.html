@@ -195,14 +195,51 @@
   .btn-generate:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; }
 
   /* ── STATUS / LOADING ── */
-  #statusArea { display: none; margin-top: 24px; text-align: center; }
-  .spinner {
-    width: 30px; height: 30px; border: 3px solid #e2e8f0;
-    border-top-color: var(--primary); border-radius: 50%;
-    animation: spin 1s linear infinite; margin: 0 auto 12px;
-  }
+  #statusArea { display: none; margin-top: 28px; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .status-msg { font-size: 14px; font-weight: 700; color: var(--primary); }
+
+  .progress-steps {
+    list-style: none;
+    display: flex; flex-direction: column; gap: 4px;
+    max-width: 320px; margin: 0 auto;
+  }
+  .step {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 4px;
+    font-size: 14px; font-weight: 600; color: var(--text-muted);
+    opacity: 0.5;
+    transition: opacity .2s;
+  }
+  .step.active, .step.done { opacity: 1; }
+  .step.active .step-label { color: var(--text); }
+  .step.done .step-label { color: var(--text-muted); }
+
+  .step-icon {
+    position: relative;
+    width: 22px; height: 22px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step-spinner {
+    display: none;
+    width: 18px; height: 18px; border: 2.5px solid #e2e8f0;
+    border-top-color: var(--primary); border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  .step-check {
+    display: none;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #22c55e; color: #fff;
+    font-size: 13px; font-weight: 800;
+    align-items: center; justify-content: center;
+    line-height: 1;
+  }
+  .step:not(.active):not(.done) .step-icon::before {
+    content: '';
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #cbd5e1;
+  }
+  .step.active .step-spinner { display: block; }
+  .step.done .step-check { display: flex; }
 
   /* ── QUIZ DISPLAY ── */
   #quizDisplay { display: none; margin-top: 24px; padding-top: 24px; }
@@ -370,8 +407,20 @@
     <button class="btn-generate" id="generateBtn" disabled>✨ Gerar Quiz com IA</button>
 
     <div id="statusArea">
-      <div class="spinner"></div>
-      <div class="status-msg" id="statusMsg">Extraindo texto do PDF...</div>
+      <ul class="progress-steps" id="progressSteps">
+        <li class="step" data-step="extract">
+          <span class="step-icon"><span class="step-spinner"></span><span class="step-check">✓</span></span>
+          <span class="step-label">Lendo PDF</span>
+        </li>
+        <li class="step" data-step="generate">
+          <span class="step-icon"><span class="step-spinner"></span><span class="step-check">✓</span></span>
+          <span class="step-label">Gerando questões</span>
+        </li>
+        <li class="step" data-step="finalize">
+          <span class="step-icon"><span class="step-spinner"></span><span class="step-check">✓</span></span>
+          <span class="step-label">Finalizando quiz</span>
+        </li>
+      </ul>
     </div>
   </div>
 
@@ -417,8 +466,25 @@
   const fileInput = document.getElementById('fileInput');
   const generateBtn = document.getElementById('generateBtn');
   const statusArea = document.getElementById('statusArea');
-  const statusMsg = document.getElementById('statusMsg');
   let extractedText = "";
+
+  // ── CONTROLE DAS ETAPAS (checklist com check ✓) ──
+  const stepEls = {
+    extract: document.querySelector('.step[data-step="extract"]'),
+    generate: document.querySelector('.step[data-step="generate"]'),
+    finalize: document.querySelector('.step[data-step="finalize"]'),
+  };
+  function resetSteps() {
+    Object.values(stepEls).forEach(el => el.classList.remove('active', 'done'));
+  }
+  function setStepActive(stepKey) {
+    Object.values(stepEls).forEach(el => el.classList.remove('active'));
+    stepEls[stepKey].classList.add('active');
+  }
+  function setStepDone(stepKey) {
+    stepEls[stepKey].classList.remove('active');
+    stepEls[stepKey].classList.add('done');
+  }
 
   // ── EXTRAÇÃO DE PDF E CHUNKING ──
   fileInput.addEventListener('change', async (e) => {
@@ -429,7 +495,8 @@
     document.getElementById('fileInfo').style.display = 'flex';
     generateBtn.disabled = true;
     statusArea.style.display = 'block';
-    statusMsg.textContent = "Extraindo texto do PDF...";
+    resetSteps();
+    setStepActive('extract');
 
     try {
       const reader = new FileReader();
@@ -443,10 +510,10 @@
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
           fullText += content.items.map(item => item.str).join(" ") + "\n";
-          statusMsg.textContent = `Lendo página ${i} de ${pdf.numPages}...`;
         }
         
         extractedText = fullText;
+        setStepDone('extract');
         statusArea.style.display = 'none';
         generateBtn.disabled = false;
       };
@@ -496,6 +563,12 @@ Leia com atenção todo o texto extraído do material de estudo abaixo e crie um
 
 Nível de dificuldade exigido: ${difficultyInstruction}
 ${casoClinicoTemplate}
+DISTRIBUIÇÃO OBRIGATÓRIA DE TÓPICOS:
+- Antes de criar as questões, identifique mentalmente TODOS os tópicos, capítulos e seções presentes no texto fornecido.
+- Distribua as ${amount} questões de forma proporcional entre esses tópicos — cada tópico deve ser coberto com pelo menos uma questão. Proibido criar mais de 2 questões sobre o mesmo sub-tópico específico.
+- O objetivo é que o estudante seja avaliado de forma abrangente sobre TODO o conteúdo do material, não apenas sobre o tema que aparece primeiro.
+- Se o material tiver 5 tópicos distintos e forem 10 questões, distribua ~2 por tópico. Se tiver 3 tópicos e 10 questões, distribua ~3-4 por tópico.
+
 REGRAS PARA TORNAR O QUIZ REALMENTE DESAFIADOR (muito importantes):
 - O objetivo é testar o estudante de verdade, não dar respostas óbvias. Evite questões em que a alternativa correta seja claramente mais longa, mais detalhada ou óbvia em relação às demais.
 - Cada questão deve ter exatamente 4 alternativas, sendo apenas UMA correta.
@@ -587,6 +660,27 @@ ${text}
     };
   }
 
+  // Amostragem distribuída do texto do PDF.
+  // Divide o texto em `slices` fatias iguais e coleta trechos centrais de cada uma,
+  // garantindo que a IA veja conteúdo do início, meio e fim do documento,
+  // sem se concentrar apenas nos primeiros tópicos.
+  function sampleDistributed(text, maxChars, slices = 12) {
+    if (text.length <= maxChars) return text;
+    const chunkSize = Math.floor(maxChars / slices);
+    const sliceLen = Math.floor(text.length / slices);
+    let result = '';
+    for (let i = 0; i < slices; i++) {
+      const sliceStart = i * sliceLen;
+      // Pega do centro de cada fatia para evitar cortar no meio de uma frase de forma extrema
+      const center = sliceStart + Math.floor(sliceLen / 2);
+      const start = Math.max(0, center - Math.floor(chunkSize / 2));
+      const end = Math.min(text.length, start + chunkSize);
+      if (i > 0) result += '\n\n[...]\n\n';
+      result += text.slice(start, end);
+    }
+    return result;
+  }
+
   async function callGroq(prompt) {
     const res = await fetch(GENERATE_URL, {
       method: 'POST',
@@ -641,26 +735,21 @@ ${text}
 
     generateBtn.disabled = true;
     statusArea.style.display = 'block';
-    statusMsg.textContent = "Professor Universitário analisando o material...";
+    resetSteps();
+    setStepDone('extract');
+    setStepActive('generate');
 
-    // O Llama 4 Scout tem limite de 30.000 tokens por minuto (TPM) no tier gratuito do Groq.
-    // Reservamos espaço para o prompt de instruções (~800 tokens) e para a resposta (6.000 tokens),
-    // deixando o restante para o texto do PDF, com margem de segurança.
+    // Amostragem distribuída: em vez de pegar só o início do PDF,
+    // dividimos o texto total em N fatias e coletamos trechos de cada uma,
+    // garantindo cobertura proporcional de todo o documento.
     const MAX_CHARS = 60000;
-    const wasTruncated = extractedText.length > MAX_CHARS;
-    const textToProcess = wasTruncated
-      ? extractedText.substring(0, MAX_CHARS)
-      : extractedText;
+    const textToProcess = sampleDistributed(extractedText, MAX_CHARS);
 
     if (!textToProcess.trim()) {
       statusArea.style.display = 'none';
       generateBtn.disabled = false;
       alert('Não foi possível extrair texto deste PDF. Verifique se ele não é uma imagem escaneada.');
       return;
-    }
-
-    if (wasTruncated) {
-      statusMsg.textContent = "PDF extenso — usando as primeiras páginas do material...";
     }
 
     const prompt = buildPrompt(difficulty, amount, textToProcess);
@@ -671,15 +760,17 @@ ${text}
         questions = await callGroq(prompt);
       } catch (firstErr) {
         // Uma segunda tentativa automática costuma resolver falhas pontuais de formatação do JSON.
-        statusMsg.textContent = "Tentando novamente, ajustando a formatação...";
         questions = await callGroq(prompt);
       }
       if (!Array.isArray(questions) || questions.length === 0) {
         throw new Error('A IA não retornou perguntas válidas.');
       }
+      setStepDone('generate');
+      setStepActive('finalize');
+      const shuffled = questions.map(shuffleOptions);
+      setStepDone('finalize');
       statusArea.style.display = 'none';
       document.getElementById('setupCard').style.display = 'none';
-      const shuffled = questions.map(shuffleOptions);
       renderQuiz(shuffled);
     } catch (err) {
       console.error(err);
