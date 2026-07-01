@@ -612,6 +612,53 @@ ${text}
 """`;
   }
 
+  // Corrige os dois problemas mais comuns em JSON gerado por IA:
+  // 1) Aspas tipográficas/curvas (" " ' ') em vez de aspas retas (" ') — inválidas em JSON.
+  // 2) Quebras de linha, tabs ou outros caracteres de controle "crus" DENTRO de uma string
+  //    (ex: a IA escreveu um Enter de verdade em vez de "\n") — também inválido em JSON estrito.
+  // Percorre o texto caractere a caractere rastreando se está dentro de uma string,
+  // e corrige apenas o que está dentro das aspas, sem tocar na estrutura do JSON.
+  function sanitizeJsonCandidate(str) {
+    let s = str
+      .replace(/[\u201C\u201D\u201F\u2033]/g, '"')
+      .replace(/[\u2018\u2019\u201B\u2032]/g, "'");
+
+    let result = '';
+    let inString = false;
+    let escapeNext = false;
+
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i];
+
+      if (inString) {
+        if (escapeNext) {
+          result += ch;
+          escapeNext = false;
+          continue;
+        }
+        if (ch === '\\') {
+          result += ch;
+          escapeNext = true;
+          continue;
+        }
+        if (ch === '"') {
+          inString = false;
+          result += ch;
+          continue;
+        }
+        if (ch === '\n') { result += '\\n'; continue; }
+        if (ch === '\r') { continue; } // descarta CR solto
+        if (ch === '\t') { result += '\\t'; continue; }
+        result += ch;
+      } else {
+        if (ch === '"') inString = true;
+        result += ch;
+      }
+    }
+
+    return result;
+  }
+
   // Tenta extrair e fazer parse de um JSON (objeto {questions:[...]} ou array puro)
   // mesmo que venha com texto extra, markdown ou pequenos erros de formatação.
   function extractQuestions(rawText) {
@@ -619,6 +666,8 @@ ${text}
 
     // Remove possíveis blocos de markdown (```json ... ```)
     let cleaned = rawText.replace(/```json|```/g, '').trim();
+    // Sanitiza aspas curvas e caracteres de controle crus dentro de strings
+    cleaned = sanitizeJsonCandidate(cleaned);
 
     const tryParse = (str) => {
       try {
@@ -655,8 +704,12 @@ ${text}
       if (result) return result;
     }
 
+    // Não conseguimos interpretar — loga a resposta bruta no console para diagnóstico.
+    console.error('Falha ao interpretar JSON da IA. Resposta bruta recebida:', rawText);
     return null;
   }
+
+
 
   // Embaralha a ordem das alternativas de uma questão (e ajusta o índice correto),
   // garantindo que a resposta certa não fique sempre nas mesmas posições (A/B).
@@ -838,6 +891,7 @@ ${text}
 
     const allQuestions = [];
     try {
+      let failedChunks = 0;
       for (let i = 0; i < textChunks.length; i++) {
         const chunkAmount = questionCounts[i];
         if (!chunkAmount) continue;
@@ -847,12 +901,19 @@ ${text}
         const chunkText = sampleDistributed(textChunks[i], MAX_CHARS_PER_CHUNK);
         const prompt = buildPrompt(difficulty, chunkAmount, chunkText, { index: i, total: textChunks.length });
 
-        let chunkQuestions;
+        let chunkQuestions = null;
         try {
           chunkQuestions = await callGroq(prompt);
         } catch (firstErr) {
-          // Uma segunda tentativa automática costuma resolver falhas pontuais de formatação do JSON.
-          chunkQuestions = await callGroq(prompt);
+          try {
+            // Uma segunda tentativa automática costuma resolver falhas pontuais de formatação do JSON.
+            chunkQuestions = await callGroq(prompt);
+          } catch (secondErr) {
+            // Não derruba o quiz inteiro por causa de UM bloco problemático —
+            // registra o erro e segue para os próximos blocos.
+            console.error(`Bloco ${i + 1}/${textChunks.length} falhou após 2 tentativas:`, secondErr);
+            failedChunks++;
+          }
         }
         if (Array.isArray(chunkQuestions) && chunkQuestions.length > 0) {
           allQuestions.push(...chunkQuestions);
@@ -860,7 +921,10 @@ ${text}
       }
 
       if (allQuestions.length === 0) {
-        throw new Error('A IA não retornou perguntas válidas.');
+        throw new Error('A IA não retornou perguntas válidas. Tente novamente — se persistir, o serviço da IA pode estar instável no momento.');
+      }
+      if (failedChunks > 0) {
+        console.warn(`${failedChunks} bloco(s) falharam e foram ignorados. Quiz gerado com ${allQuestions.length} questão(ões) dos blocos restantes.`);
       }
 
       setStepDone('generate');
